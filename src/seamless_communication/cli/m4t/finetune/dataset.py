@@ -30,7 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger("dataset")
 
 
-SUPPORTED_DATASETS = ['google/fleurs', 'speechcolab/gigaspeech']
+SUPPORTED_DATASETS = ['google/fleurs', 'speechcolab/gigaspeech', 'erik/cvss-c']
 """ List of Huggingface Datasets that we support at the moment
 """
 
@@ -129,6 +129,7 @@ def download_fleurs(
     target_lang: str,
     split: str,
     save_directory: str,
+    dataset_name: str
 ):
     _check_lang_code_mapping(source_lang)
     _check_lang_code_mapping(target_lang)
@@ -144,10 +145,11 @@ def download_fleurs(
         skip_source_audio=True,  # don't extract units from source audio
         skip_target_audio=False,
         split=split,
+        dataset_name=dataset_name
     )
     manifest_path: str = os.path.join(save_directory, f"{split}_manifest.json")
     with open(manifest_path, "w") as fp_out:
-        for idx, sample in enumerate(dataset_iterator.__iter__(), start=1):
+        for idx, sample in enumerate(dataset_iterator.__iter__(is_cvss=dataset_name == 'erik/cvss-c'), start=1):
             # correction as FleursDatasetBuilder return fleurs lang codes
             sample.source.lang = source_lang
             sample.target.lang = target_lang
@@ -235,7 +237,7 @@ def main() -> None:
         f"The only supported datasets are `{SUPPORTED_DATASETS}`. Please use one of these in `--name`."
 
     if args.name == 'google/fleurs':
-        download_fleurs(args.source_lang, args.target_lang, args.split, args.save_dir)
+        download_fleurs(args.source_lang, args.target_lang, args.split, args.save_dir, args.name)
     elif args.name == 'speechcolab/gigaspeech':
         assert args.huggingface_token is not None, \
             "Your HuggingFace token is necessary for GigaSpeech. Please read the GigaSpeech agreement."

@@ -12,7 +12,7 @@ from typing import Dict, Iterable, Optional
 
 import numpy as np
 import torch
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 
 from .datatypes import LangPairSample, MultimodalSample
 
@@ -28,13 +28,14 @@ class SpeechTokenizer:
 class Speech2SpeechFleursDatasetBuilder:
     """Assembles speech2speech dataset from google/fleurs on HuggingFace"""
 
-    DATASET_NAME = "google/fleurs"
+    #DATASET_NAME = "google/fleurs"
 
     def __init__(
         self,
         source_lang: str,
         target_lang: str,
         split: str = "test",
+        dataset_name: str = 'google/fleurs',
         skip_source_audio: bool = True,
         skip_target_audio: bool = True,
         audio_dtype: torch.dtype = torch.float32,
@@ -48,7 +49,8 @@ class Speech2SpeechFleursDatasetBuilder:
         self.audio_dtype = audio_dtype
         self.skip_source_audio = skip_source_audio
         self.skip_target_audio = skip_target_audio
-        self.speech_tokenizer = speech_tokenizer
+        self.speech_tokenizer = speech_tokenizer,
+        self.dataset_name = dataset_name
 
     def _prepare_sample(
         self,
@@ -89,16 +91,23 @@ class Speech2SpeechFleursDatasetBuilder:
             units=units,
         )
 
-    def iterate_lang_audio_samples(self, lang: str) -> Iterable[MultimodalSample]:
-        ds = load_dataset(
-            self.DATASET_NAME,
-            lang,
-            split=self.split,
-            cache_dir=self.dataset_cache_dir,
-            streaming=False,
-            trust_remote_code=True,
-        )
+    def iterate_lang_audio_samples(self, lang: str, is_cvss: bool = False, part: str) -> Iterable[MultimodalSample]:
+        
+        if self.dataset_name == 'google/fleurs':
+            ds = load_dataset(
+                'google/fleurs',
+                lang,
+                split=self.split,
+                cache_dir=self.dataset_cache_dir,
+                streaming=False,
+                trust_remote_code=True,
+            )
+        if is_cvss and part == 'source':
+            ds = load_from_disk('fleurs_source')
+        elif is_cvss and part == 'target':
+            ds = load_from_disk('fleurs_target')
         for item in ds:
+       
             audio_path = os.path.join(
                 os.path.dirname(item["path"]), item["audio"]["path"]
             )
@@ -118,11 +127,11 @@ class Speech2SpeechFleursDatasetBuilder:
                 lang=lang,
             )
 
-    def __iter__(self) -> Iterable[LangPairSample]:
+    def __iter__(self, is_cvss=False) -> Iterable[LangPairSample]:
         logger.info(f"Loading {self.target_lang} samples")
         target_samples: Dict[int, MultimodalSample] = {}
         for idx, sample in enumerate(
-            self.iterate_lang_audio_samples(lang=self.target_lang)
+            self.iterate_lang_audio_samples(lang=self.target_lang, is_cvss=is_cvss, part='source')
         ):
             if idx and idx % 100 == 0:
                 logger.info(f"..loaded {idx} target samples")
@@ -130,7 +139,7 @@ class Speech2SpeechFleursDatasetBuilder:
 
         logger.info(f"Loading {self.source_lang} samples")
         for idx, sample in enumerate(
-            self.iterate_lang_audio_samples(lang=self.source_lang)
+            self.iterate_lang_audio_samples(lang=self.source_lang, is_cvss=is_cvss, part='target')
         ):
             if idx and idx % 100 == 0:
                 logger.info(f"..loaded {idx} source samples")
