@@ -141,7 +141,7 @@ def download_fleurs(
         source_lang=UNITY_TO_FLEURS_LANG_MAPPING[source_lang],
         target_lang=UNITY_TO_FLEURS_LANG_MAPPING[target_lang],
         dataset_cache_dir=save_directory,
-        speech_tokenizer=tokenizer,
+        speech_tokenizer=(tokenizer),
         skip_source_audio=True,  # don't extract units from source audio
         skip_target_audio=False,
         split=split,
@@ -232,11 +232,12 @@ def init_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    print("Hey")
     args = init_parser().parse_args()
     assert args.name in SUPPORTED_DATASETS, \
         f"The only supported datasets are `{SUPPORTED_DATASETS}`. Please use one of these in `--name`."
 
-    if args.name == 'google/fleurs':
+    if args.name == 'google/fleurs' or args.name == 'erik/cvss-c':
         download_fleurs(args.source_lang, args.target_lang, args.split, args.save_dir, args.name)
     elif args.name == 'speechcolab/gigaspeech':
         assert args.huggingface_token is not None, \
@@ -245,4 +246,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    print("Hola!")
     main()

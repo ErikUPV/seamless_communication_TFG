@@ -49,7 +49,7 @@ class Speech2SpeechFleursDatasetBuilder:
         self.audio_dtype = audio_dtype
         self.skip_source_audio = skip_source_audio
         self.skip_target_audio = skip_target_audio
-        self.speech_tokenizer = speech_tokenizer,
+        self.speech_tokenizer = speech_tokenizer
         self.dataset_name = dataset_name
 
     def _prepare_sample(
@@ -91,8 +91,9 @@ class Speech2SpeechFleursDatasetBuilder:
             units=units,
         )
 
-    def iterate_lang_audio_samples(self, lang: str, is_cvss: bool = False, part: str) -> Iterable[MultimodalSample]:
+    def iterate_lang_audio_samples(self, part: str, lang: str, is_cvss: bool = False) -> Iterable[MultimodalSample]:
         
+
         if self.dataset_name == 'google/fleurs':
             ds = load_dataset(
                 'google/fleurs',
@@ -103,11 +104,11 @@ class Speech2SpeechFleursDatasetBuilder:
                 trust_remote_code=True,
             )
         if is_cvss and part == 'source':
-            ds = load_from_disk('fleurs_source')
+            ds = load_from_disk('~/s2st/fleurs_source')[self.split]
         elif is_cvss and part == 'target':
-            ds = load_from_disk('fleurs_target')
+            ds = load_from_disk('~/s2st/fleurs_target')[self.split]
         for item in ds:
-       
+            #print(ds)
             audio_path = os.path.join(
                 os.path.dirname(item["path"]), item["audio"]["path"]
             )
@@ -118,10 +119,14 @@ class Speech2SpeechFleursDatasetBuilder:
                 item["audio"]["sampling_rate"],
                 item["transcription"],
             )
+
+            #print(f"The shape of the waveform is {waveform.shape}")
+
+            #print(f"Waveform: {waveform}")
             yield self._prepare_sample(
                 sample_id=sample_id,
                 audio_local_path=audio_local_path,
-                waveform_npy=waveform,
+                waveform_npy=np.array(waveform),
                 sampling_rate=sampling_rate,
                 text=text,
                 lang=lang,
