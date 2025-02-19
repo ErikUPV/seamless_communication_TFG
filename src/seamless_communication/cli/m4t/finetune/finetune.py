@@ -8,6 +8,7 @@ import argparse
 import logging
 import os
 from pathlib import Path
+import wandb
 
 import torch
 
@@ -136,6 +137,11 @@ def init_parser() -> argparse.ArgumentParser:
         default="cuda",
         help=("Device to fine-tune on. See `torch.device`."),
     )
+    parser.add_argument(
+        '--use_wandb',
+        action='store_true',
+        help=("Activate usage of wandb to report training metrics. Log into wandb by yourself via console.")
+    )
     return parser
 
 
@@ -181,6 +187,18 @@ def main() -> None:
     # Put model on selected device
     model = model.to(finetune_params.device)
 
+    if args.use_wandb:
+        wandb.init(
+        project="seamless-m4t-medium-finetune",
+        config={
+            "model": "seamless-m4t-medium",
+            "learning_rate": args.learning_rate,
+            "batch_size": args.batch_size,
+            "max_epochs":args.max_epochs,
+            "dataset":"CVSS"
+        }
+    )
+
     # TODO: delete unused params to reduce GPU memory consumption
     train_dataloader = dataloader.UnitYDataLoader(
         text_tokenizer=text_tokenizer,
@@ -212,7 +230,9 @@ def main() -> None:
         params=finetune_params,
         train_data_loader=train_dataloader,
         eval_data_loader=eval_dataloader,
-        freeze_modules=args.freeze_layers)
+        freeze_modules=args.freeze_layers,
+        use_wandb=args.use_wandb)
+        
     
     finetune.run()
 

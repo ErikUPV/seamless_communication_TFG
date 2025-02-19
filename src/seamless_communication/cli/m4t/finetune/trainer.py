@@ -3,7 +3,7 @@
 #
 # This source code is licensed under the license found in the
 # MIT_LICENSE file in the root directory of this source tree.
-
+import wandb
 
 import logging
 import time
@@ -249,8 +249,10 @@ class UnitYFinetune:
         params: FinetuneParams,
         train_data_loader: dataloader.UnitYDataLoader,
         eval_data_loader: Optional[dataloader.UnitYDataLoader] = None,
-        freeze_modules: Optional[List[Union[str, torch.nn.Module]]] = None
+        freeze_modules: Optional[List[Union[str, torch.nn.Module]]] = None,
+        use_wandb: Optional[bool] = False
     ):
+        self.use_wandb = use_wandb
         self.params = params
         self.calc_loss = CalcLoss(
             label_smoothing=self.params.label_smoothing,
@@ -320,6 +322,9 @@ class UnitYFinetune:
                     for param in module.parameters():
                         param.requires_grad = False
 
+    def _log_to_wandb(self, **stats):
+        wandb.log(stats)
+
     def _update_eval_stats(self, eval_loss: float) -> None:
         self.is_best_state = (
             self.best_eval_loss is None or eval_loss < self.best_eval_loss
@@ -334,6 +339,10 @@ class UnitYFinetune:
             f"best_loss={self.best_eval_loss:.4f} "
             f"patience_steps_left={self.patience_left}"
         )
+        if self.use_wandb:
+            self._log_to_wandb({
+                "eval_loss" : eval_loss
+            })
 
     @torch.no_grad()
     def _eval_model(self, n_batches: int) -> None:
@@ -369,6 +378,12 @@ class UnitYFinetune:
                 f"train loss={avg_loss:.4f} "
                 f"last lr={self.lr_scheduler.get_last_lr()[0]:.2E}"
             )
+            if self.use_wandb:
+                self._log_to_wandb({
+                    "train_epoch":self.epoch_idx +1,
+                    "train_loss" : avg_loss,
+                    "train_learning_rate": self.lr_scheduler.get_last_lr()[0]
+                })
 
     def _train_step(self, batch: List[dataloader.MultimodalSeqsBatch]) -> None:
         """Run one train step"""
