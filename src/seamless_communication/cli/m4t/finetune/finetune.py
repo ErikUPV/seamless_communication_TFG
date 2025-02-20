@@ -11,6 +11,7 @@ from pathlib import Path
 import wandb
 
 import torch
+from datasets import load_dataset
 
 from seamless_communication.cli.m4t.finetune import dataloader, dist_utils, trainer
 from seamless_communication.models.unity import (
@@ -142,6 +143,11 @@ def init_parser() -> argparse.ArgumentParser:
         action='store_true',
         help=("Activate usage of wandb to report training metrics. Log into wandb by yourself via console.")
     )
+    parser.add_argument(
+        '--is_source_cvss',
+        action="store_true",
+        help="If the source dataset is CVSS, it will load the audio_arrays directly"
+    )
     return parser
 
 
@@ -172,7 +178,7 @@ def main() -> None:
     
     logger.info(f"Finetune Params: {finetune_params}")
     
-    model = load_unity_model(args.model_name, device=torch.device("cpu"), dtype=torch.float32)
+    model = load_unity_model(args.model_name, device=torch.device("cpu"), dtype=torch.float16)
     assert model.target_vocab_info == text_tokenizer.vocab_info
     
     if (
@@ -199,10 +205,17 @@ def main() -> None:
         }
     )
 
-    source_audios = load_dataset(
-        'ebellob/cvss-c-fleurs-format-target',
-        split='train'
-    )['audio']
+    cvss_train_dataset, cvss_eval_dataset = None, None
+
+    if args.is_source_cvss:
+        cvss_train_dataset = load_dataset(
+            'ebellob/cvss-c-fleurs-format-target',
+            split='train'
+        )
+        cvss_eval_dataset = load_dataset(
+            'ebellob/cvss-c-fleurs-format-target',
+            split='validation'
+        )
 
     # TODO: delete unused params to reduce GPU memory consumption
     train_dataloader = dataloader.UnitYDataLoader(
@@ -216,7 +229,7 @@ def main() -> None:
             float_dtype=finetune_params.float_dtype,
         ),
         dataset_manifest_path=args.train_dataset,
-        cvss_audios=source_audios
+        cvss_dataset=cvss_train_dataset,
         max_src_tokens_per_batch=args.max_src_tokens)
     
     eval_dataloader = dataloader.UnitYDataLoader(
@@ -229,6 +242,7 @@ def main() -> None:
             max_audio_length_sec=75.0,
             float_dtype=finetune_params.float_dtype,
         ),
+        cvss_dataset=cvss_eval_dataset
         dataset_manifest_path=args.eval_dataset)
     
     finetune = trainer.UnitYFinetune(

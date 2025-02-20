@@ -100,6 +100,7 @@ class UnitYDataLoader:
         unit_tokenizer: UnitTokenizer,
         dataset_manifest_path: str,
         batching_config: BatchingConfig,
+        cvss_dataset,
         max_src_tokens_per_batch: int = 100000
     ):
         self.text_tokenizer = text_tokenizer
@@ -115,6 +116,7 @@ class UnitYDataLoader:
             "device": torch.device("cpu"),
             "dtype": self.batching_config.float_dtype,
         }
+        self.cvss_dataset = cvss_dataset
         self.dataset = self._load_manifest(dataset_manifest_path)
         self.max_src_tokens_per_batch = max_src_tokens_per_batch
 
@@ -138,33 +140,34 @@ class UnitYDataLoader:
         return self.get_dataloader().__iter__()
 
     def _get_source_fbank_from_array(self, audio_array: torch.Tensor, sample_rate: int) -> torch.Tensor:
-    """
-    Convert audio array directly to fbank features without loading from file.
-    
-    Args:
-        audio_array: Audio tensor with shape [time] or [time, channels]
-        sample_rate: Sample rate of the audio
+        """
+        Convert audio array directly to fbank features without loading from file.
         
-    Returns:
-        Tensor of fbank features
-    """
-    assert sample_rate == self.SAMPLE_RATE, f"sample rate {sample_rate} != {self.SAMPLE_RATE}, please resample"
-    assert len(audio_array.shape) in (1, 2)
-    
-    # Handle channel dimension
-    if len(audio_array.shape) == 1:
-        wav = audio_array.unsqueeze(-1)
-    elif audio_array.shape[0] <= 2:  # channel is first, should be second
-        wav = audio_array.transpose(0, 1)
-    else:
-        wav = audio_array
+        Args:
+            audio_array: Audio tensor with shape [time] or [time, channels]
+            sample_rate: Sample rate of the audio
+            
+        Returns:
+            Tensor of fbank features
+        """
+        assert sample_rate == self.SAMPLE_RATE, f"sample rate {sample_rate} != {self.SAMPLE_RATE}, please resample"
+        assert len(audio_array.shape) in (1, 2)
         
-    return WaveformToFbankConverter(**self._fbank_extract_params)(  # type: ignore
-        {
-            "waveform": wav,
-            "sample_rate": self.SAMPLE_RATE,
-        }
-    )["fbank"]
+        #Handle channel dimension
+        if len(audio_array.shape) == 1:
+            wav = audio_array.unsqueeze(-1)
+        elif audio_array.shape[0] <= 2:  # channel is first, should be second
+            wav = audio_array.transpose(0, 1)
+        else:
+            wav = audio_array
+        
+            
+        return WaveformToFbankConverter(**self._fbank_extract_params)(  # type: ignore
+            {
+                "waveform": wav,
+                "sample_rate": self.SAMPLE_RATE,
+            }
+        )["fbank"]
 
     def _get_source_fbank(self, sample: LangPairSample) -> Tensor:
         wav, sample_rate = torchaudio.load(sample.source.audio_local_path)
@@ -245,20 +248,34 @@ class UnitYDataLoader:
         return samples_with_fbanks
 
     def _is_cvss_dataset(self, dataset_path: str) -> bool:
-    """
-    Check if the dataset is CVSS based on the manifest path or contents.
-    
-    Args:
-        dataset_path: Path to the dataset manifest
+        """
+        Check if the dataset is CVSS based on the manifest path or contents.
         
-    Returns:
-        True if dataset is CVSS, False otherwise
-    """
-    return self.source_lang == 'eng'
+        Args:
+            dataset_path: Path to the dataset manifest
+            
+        Returns:
+            True if dataset is CVSS, False otherwise
+        """
+        return self.source_
 
     def _prepare_batch(self, raw_samples: List[Dict[str, Any]]) -> MultimodalSeqsBatch:
         samples = [LangPairSample.from_json(sample) for sample in raw_samples]
         # input speech
+        
+        if self.cvss_dataset is not None:
+            ids = [sample.source.id for sample in samples]
+            cvss_filtered = self.cvss_dataset.filter(
+                lambda example: example['id'] in ids
+            )
+            for sample in samples:
+                id = sample.source.id
+                for item in cvss_filtered:
+                    if item['id'] == id:
+                        sample.source.waveform = torch.tensor(item['audio']['array'])
+
+
+        
 
 
         
@@ -270,13 +287,13 @@ class UnitYDataLoader:
             filtered_samples if filtered_samples else [samples[0]]
         )  # keep at least one sample
 
-        is_cvss = self._is_cvss_dataset(self.dataset_manifest_path)
+        is_cvss = self.cvss_dataset is not None
     
         if is_cvss:
             # Load directly from arrays
             with_fbanks = [
                 (sample, self._get_source_fbank_from_array(
-                    sample.source.audio_array, sample.source.sample_rate)) 
+                    sample.source.waveform, 16_000)) 
                 for sample in samples
             ]
         else:
