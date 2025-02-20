@@ -92,7 +92,7 @@ class Speech2SpeechFleursDatasetBuilder:
         )
 
     def iterate_lang_audio_samples(self, part: str, lang: str, is_cvss: bool = False) -> Iterable[MultimodalSample]:
-        
+        cf = DownloadConfig(resume_download=True, num_proc=24)
 
         if self.dataset_name == 'google/fleurs':
             ds = load_dataset(
@@ -104,9 +104,23 @@ class Speech2SpeechFleursDatasetBuilder:
                 trust_remote_code=True,
             )
         if is_cvss and part == 'source':
-            ds = load_from_disk('~/s2st/fleurs_source')[self.split]
+#            ds = load_from_disk('~/s2st/fleurs_source')[self.split]
+            ds = load_dataset(
+                'ebellob/cvss-c-fleurs-format-source',
+                split=self.split,
+                streaming=False,
+                trust_remote_code=True,
+                num_proc=12
+            )
         elif is_cvss and part == 'target':
-            ds = load_from_disk('~/s2st/fleurs_target')[self.split]
+#            ds = load_from_disk('~/s2st/fleurs_target')[self.split]
+            ds = load_dataset(
+                'ebellob/cvss-c-fleurs-format-target',
+                split=self.split,
+                streaming=False,
+                trust_remote_code=True,
+                num_proc=12
+            )
         for item in ds:
             #print(ds)
             audio_path = os.path.join(
@@ -136,7 +150,7 @@ class Speech2SpeechFleursDatasetBuilder:
         logger.info(f"Loading {self.target_lang} samples")
         target_samples: Dict[int, MultimodalSample] = {}
         for idx, sample in enumerate(
-            self.iterate_lang_audio_samples(lang=self.target_lang, is_cvss=is_cvss, part='source')
+            self.iterate_lang_audio_samples(lang=self.target_lang, is_cvss=is_cvss, part='target')
         ):
             if idx and idx % 100 == 0:
                 logger.info(f"..loaded {idx} target samples")
@@ -144,7 +158,7 @@ class Speech2SpeechFleursDatasetBuilder:
 
         logger.info(f"Loading {self.source_lang} samples")
         for idx, sample in enumerate(
-            self.iterate_lang_audio_samples(lang=self.source_lang, is_cvss=is_cvss, part='target')
+            self.iterate_lang_audio_samples(lang=self.source_lang, is_cvss=is_cvss, part='source')
         ):
             if idx and idx % 100 == 0:
                 logger.info(f"..loaded {idx} source samples")

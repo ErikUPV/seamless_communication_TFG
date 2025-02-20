@@ -199,6 +199,11 @@ def main() -> None:
         }
     )
 
+    source_audios = load_dataset(
+        'ebellob/cvss-c-fleurs-format-target',
+        split='train'
+    )['audio']
+
     # TODO: delete unused params to reduce GPU memory consumption
     train_dataloader = dataloader.UnitYDataLoader(
         text_tokenizer=text_tokenizer,
@@ -211,6 +216,7 @@ def main() -> None:
             float_dtype=finetune_params.float_dtype,
         ),
         dataset_manifest_path=args.train_dataset,
+        cvss_audios=source_audios
         max_src_tokens_per_batch=args.max_src_tokens)
     
     eval_dataloader = dataloader.UnitYDataLoader(

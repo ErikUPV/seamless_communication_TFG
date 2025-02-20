@@ -137,6 +137,35 @@ class UnitYDataLoader:
     def __iter__(self) -> Iterable[MultimodalSeqsBatch]:
         return self.get_dataloader().__iter__()
 
+    def _get_source_fbank_from_array(self, audio_array: torch.Tensor, sample_rate: int) -> torch.Tensor:
+    """
+    Convert audio array directly to fbank features without loading from file.
+    
+    Args:
+        audio_array: Audio tensor with shape [time] or [time, channels]
+        sample_rate: Sample rate of the audio
+        
+    Returns:
+        Tensor of fbank features
+    """
+    assert sample_rate == self.SAMPLE_RATE, f"sample rate {sample_rate} != {self.SAMPLE_RATE}, please resample"
+    assert len(audio_array.shape) in (1, 2)
+    
+    # Handle channel dimension
+    if len(audio_array.shape) == 1:
+        wav = audio_array.unsqueeze(-1)
+    elif audio_array.shape[0] <= 2:  # channel is first, should be second
+        wav = audio_array.transpose(0, 1)
+    else:
+        wav = audio_array
+        
+    return WaveformToFbankConverter(**self._fbank_extract_params)(  # type: ignore
+        {
+            "waveform": wav,
+            "sample_rate": self.SAMPLE_RATE,
+        }
+    )["fbank"]
+
     def _get_source_fbank(self, sample: LangPairSample) -> Tensor:
         wav, sample_rate = torchaudio.load(sample.source.audio_local_path)
         assert (
@@ -215,9 +244,23 @@ class UnitYDataLoader:
             samples_with_fbanks = samples_with_fbanks[:max_samples_for_batch]
         return samples_with_fbanks
 
+    def _is_cvss_dataset(self, dataset_path: str) -> bool:
+    """
+    Check if the dataset is CVSS based on the manifest path or contents.
+    
+    Args:
+        dataset_path: Path to the dataset manifest
+        
+    Returns:
+        True if dataset is CVSS, False otherwise
+    """
+    return self.source_lang == 'eng'
+
     def _prepare_batch(self, raw_samples: List[Dict[str, Any]]) -> MultimodalSeqsBatch:
         samples = [LangPairSample.from_json(sample) for sample in raw_samples]
         # input speech
+
+
         
         #  - filter long audio samples
         filtered_samples = [
@@ -226,7 +269,20 @@ class UnitYDataLoader:
         samples = (
             filtered_samples if filtered_samples else [samples[0]]
         )  # keep at least one sample
-        with_fbanks = [(sample, self._get_source_fbank(sample)) for sample in samples]
+
+        is_cvss = self._is_cvss_dataset(self.dataset_manifest_path)
+    
+        if is_cvss:
+            # Load directly from arrays
+            with_fbanks = [
+                (sample, self._get_source_fbank_from_array(
+                    sample.source.audio_array, sample.source.sample_rate)) 
+                for sample in samples
+            ]
+        else:
+            # Load from files as before
+            with_fbanks = [(sample, self._get_source_fbank(sample)) for sample in samples]
+
         #  - filter NaNs in fbanks
         filtered = [
             (sample, fbank)
