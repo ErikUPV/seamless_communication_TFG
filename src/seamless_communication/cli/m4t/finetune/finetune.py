@@ -242,7 +242,7 @@ def main() -> None:
             max_audio_length_sec=75.0,
             float_dtype=finetune_params.float_dtype,
         ),
-        cvss_dataset=cvss_eval_dataset
+        cvss_dataset=cvss_eval_dataset,
         dataset_manifest_path=args.eval_dataset)
     
     finetune = trainer.UnitYFinetune(
