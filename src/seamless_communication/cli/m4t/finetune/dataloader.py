@@ -141,7 +141,8 @@ class UnitYDataLoader:
         unit_tokenizer: UnitTokenizer,
         dataset_manifest_path: str,
         batching_config: BatchingConfig,
-        cvss_dataset,
+        cvss_SRC_dataset,
+        cvss_TGT_dataset,
         max_src_tokens_per_batch: int = 100000
     ):
         self.text_tokenizer = text_tokenizer
@@ -157,10 +158,14 @@ class UnitYDataLoader:
             "device": torch.device("cpu"),
             "dtype": self.batching_config.float_dtype,
         }
-        self.cvss_dataset = cvss_dataset
+        self.cvss_SRC_dataset = cvss_SRC_dataset
+        self.cvss_TGT_dataset = cvss_TGT_dataset
         self.dataset = self._load_manifest(dataset_manifest_path)
-        self.paired_dataset = PairedHFDataset(dataset, cvss_dataset)
+        self.SRC_paired_dataset = PairedHFDataset(self.dataset, self.cvss_SRC_dataset)
+        self.TGT_paired_dataset = PairedHFDataset(self.dataset, self.cvss_TGT_dataset)
         self.max_src_tokens_per_batch = max_src_tokens_per_batch
+
+
 
     def get_dataloader(self) -> DataLoader[SeqsBatch]:
         subset = split_dataset_by_node(
@@ -305,18 +310,15 @@ class UnitYDataLoader:
         samples = [LangPairSample.from_json(sample) for sample in raw_samples]
         # input speech
         
-        if self.cvss_dataset is not None:
-            ids = [sample.source.id for sample in samples]
-            cvss_filtered = self.cvss_dataset.filter(
-                lambda example: example['id'] in ids,
-                num_proc=16
-            )
-            for sample in samples:
-                id = sample.source.id
-                for item in cvss_filtered:
-                    if item['id'] == id:
-                        sample.source.waveform = torch.tensor(item['audio']['array'])
+        #if self.cvss_dataset is not None:
+        
+        source_audio_arrays = [
+            self.paired_dataset[sample.id]['audio']['array'] for sample in samples.source
+        ]
 
+        for sample in samples:
+            _, cvss_sample = self.SRC_paired_dataset[sample.source.id]
+            sample.source.waveform = cvss_sample['audio']['array']
 
         
 

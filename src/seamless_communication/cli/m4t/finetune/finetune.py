@@ -208,8 +208,12 @@ def main() -> None:
     cvss_train_dataset, cvss_eval_dataset = None, None
 
     if args.is_source_cvss:
-        cvss_train_dataset = load_dataset(
+        cvss_EN_train_dataset = load_dataset(
             'ebellob/cvss-c-fleurs-format-target',
+            split='train'
+        )
+        cvss_ES_train_dataset = load_dataset(
+            'ebellob/cvss-c-fleurs-format-source',
             split='train'
         )
         cvss_eval_dataset = load_dataset(
@@ -229,7 +233,8 @@ def main() -> None:
             float_dtype=finetune_params.float_dtype,
         ),
         dataset_manifest_path=args.train_dataset,
-        cvss_dataset=cvss_train_dataset,
+        cvss_SRC_dataset=cvss_EN_train_dataset,
+        cvss_TGT_dataset=cvss_ES_train_dataset,
         max_src_tokens_per_batch=args.max_src_tokens)
     
     eval_dataloader = dataloader.UnitYDataLoader(
