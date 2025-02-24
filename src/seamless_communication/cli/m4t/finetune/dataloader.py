@@ -99,13 +99,13 @@ class PairedHFDataset(Dataset):
         dataset2 (datasets.Dataset): Second Hugging Face dataset
         id_column (str): Name of the ID column in both datasets
     """
-    def __init__(self, dataset1, dataset2, id_column='id'):
+    def __init__(self, dataset1, dataset2, split, id_column='id'):
         self.dataset1 = dataset1
         self.dataset2 = dataset2
         self.id_column = id_column
         
         # Convert IDs to sets for efficient lookup
-        self.ids1 = set(dataset1[id_column])
+        self.ids1 = set(dataset1[split][id_column])
         self.ids2 = set(dataset2[id_column])
         
         # Find common IDs and create mappings
@@ -161,8 +161,8 @@ class UnitYDataLoader:
         self.cvss_SRC_dataset = cvss_SRC_dataset
         self.cvss_TGT_dataset = cvss_TGT_dataset
         self.dataset = self._load_manifest(dataset_manifest_path)
-        self.SRC_paired_dataset = PairedHFDataset(self.dataset, self.cvss_SRC_dataset)
-        self.TGT_paired_dataset = PairedHFDataset(self.dataset, self.cvss_TGT_dataset)
+        self.SRC_paired_dataset = PairedHFDataset(self.dataset, self.cvss_SRC_dataset, split='source')
+        self.TGT_paired_dataset = PairedHFDataset(self.dataset, self.cvss_TGT_dataset, split='target')
         self.max_src_tokens_per_batch = max_src_tokens_per_batch
 
 
