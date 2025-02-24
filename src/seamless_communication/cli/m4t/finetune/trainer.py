@@ -81,7 +81,7 @@ class FinetuneParams:
     eval_batch_size: int = 5
     """The batch size during evaluation."""
 
-    gradient_accumulation_steps: int = 1
+    grad_accum_steps: int = 1
     """Number of steps to accumulate gradients before performing an optimizer step"""
 
     device: Device = torch.device("cuda")
@@ -341,7 +341,7 @@ class UnitYFinetune:
             loss = self.calc_loss(batch, tokens, units)
             
             # Normalize loss by gradient accumulation steps
-            loss = loss / self.params.gradient_accumulation_steps
+            loss = loss / self.params.grad_accum_steps
 
         if loss.isnan().any().item():
             logger.error(batch.speech_to_text)
@@ -352,14 +352,14 @@ class UnitYFinetune:
         
         # Update training statistics
         assert batch.speech_to_text.src_tokens is not None
-        self.train_loss_hist.update(1, loss.item() * self.params.gradient_accumulation_steps)
+        self.train_loss_hist.update(1, loss.item() * self.params.grad_accum_steps)
         self._train_step_log()
 
         # Increment accumulation step counter
         self.grad_accum_step += 1
 
         # Only perform optimizer step after accumulating enough gradients
-        if self.grad_accum_step >= self.params.gradient_accumulation_steps:
+        if self.grad_accum_step >= self.params.grad_accum_steps:
             self.grad_scaler.step(self.optimizer)
             self.grad_scaler.update()
             self.lr_scheduler.step()
@@ -367,7 +367,7 @@ class UnitYFinetune:
             self.update_idx += 1
 
     def run(self) -> None:
-        logger.info(f"Start Finetuning with gradient accumulation steps: {self.params.gradient_accumulation_steps}")
+        logger.info(f"Start Finetuning with gradient accumulation steps: {self.params.grad_accum_steps}")
         self._reset_stats()
         self._eval_model(n_batches=100)
         
