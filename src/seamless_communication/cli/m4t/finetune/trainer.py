@@ -327,6 +327,51 @@ class UnitYFinetune:
                     for param in module.parameters():
                         param.requires_grad = False
 
+    def _log_to_wandb(self, **stats):
+        wandb.log(stats)
+
+    def _update_eval_stats(self, eval_loss: float) -> None:
+        self.is_best_state = (
+            self.best_eval_loss is None or eval_loss < self.best_eval_loss
+        )
+        self.best_eval_loss = eval_loss if self.is_best_state else self.best_eval_loss
+        self.patience_left = (
+            self.params.patience if self.is_best_state else self.patience_left - 1
+        )
+        logger.info(
+            f"Eval after {self.update_idx} updates: "
+            f"loss={eval_loss:.4f} "
+            f"best_loss={self.best_eval_loss:.4f} "
+            f"patience_steps_left={self.patience_left}"
+        )
+        if self.use_wandb:
+            self._log_to_wandb({
+                "eval_loss" : eval_loss
+            })
+
+    @torch.no_grad()
+    def _eval_model(self, n_batches: int) -> None:
+        """Calc avg loss on eval dataset and update evaluation stats"""
+        if self.eval_data_loader is None:
+            return
+        logger.info(f"Evaluation Step {self.update_idx // self.params.eval_steps}...")
+        loss_hist = LossCollector(device=self.params.device)
+        self.model.eval()
+        for batch in self.eval_data_loader.get_dataloader():
+            if n_batches == 0:
+                break
+            assert batch.speech_to_text.src_tokens is not None
+            with torch.autocast(device_type=self.params.device.type, dtype=self.params.float_dtype):
+                loss = self.calc_loss(batch, *self.model(batch))
+            if loss.isnan():
+                logger.warning("Eval batch loss value is NaN, skipping")
+                continue
+            del batch  # force memory release
+            loss_hist.update(1, loss.item())
+            n_batches -= 1
+        eval_loss = loss_hist.reduce()
+        self._update_eval_stats(eval_loss)
+
     def _train_step_log(self) -> None:
         """Log train stats"""
         if (self.update_idx + 1) % self.params.log_steps == 0:
@@ -342,7 +387,7 @@ class UnitYFinetune:
             if self.use_wandb:
                 self._log_to_wandb({
                     "train_epoch": self.epoch_idx + 1,
-                    "train_loss": avg_loss,
+                    "train/train_loss": avg_loss,
                     "train_learning_rate": self.lr_scheduler.get_last_lr()[0]
                 })
 
