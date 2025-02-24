@@ -90,38 +90,65 @@ class BatchingConfig:
 def worker_init_fn(worker_id: int) -> None:
     np.random.seed(np.random.get_state()[1][0] + worker_id)  # type: ignore
 
-def create_lookup_function(reference_dataset, id_column='id'):
-    """
-    Creates a function that efficiently looks up items in a dataset by ID.
+# def create_lookup_function(reference_dataset, id_column='id'):
+#     """
+#     Creates a function that efficiently looks up items in a dataset by ID.
     
-    Args:
-        reference_dataset (datasets.Dataset): The dataset to create lookup for
-        id_column (str): Name of the ID column
+#     Args:
+#         reference_dataset (datasets.Dataset): The dataset to create lookup for
+#         id_column (str): Name of the ID column
         
-    Returns:
-        function: A lookup function that takes an ID and returns the corresponding item
-    """
-    # Create ID to index mapping
-    id_to_idx = {str(id_): idx for idx, id_ in enumerate(reference_dataset[id_column])}
+#     Returns:
+#         function: A lookup function that takes an ID and returns the corresponding item
+#     """
+#     # Create ID to index mapping
+#     id_to_idx = {str(id_): idx for idx, id_ in enumerate(reference_dataset[id_column])}
 
 
     
-    return lambda id_: lookup(id_, reference_dataset, id_to_idx)
+#     return lambda id_: lookup(id_, reference_dataset, id_to_idx)
 
-def lookup(id_, reference_dataset, id_to_idx):
-    """
-    Look up an item by ID.
+# def lookup(id_, reference_dataset, id_to_idx):
+#     """
+#     Look up an item by ID.
     
-    Args:
-        id_ (str): The ID to look up
+#     Args:
+#         id_ (str): The ID to look up
         
-    Returns:
-        dict: The dataset item with the matching ID
-    """
-    idx = id_to_idx.get(str(id_))
-    if idx is None:
-        return None
-    return reference_dataset[idx]
+#     Returns:
+#         dict: The dataset item with the matching ID
+#     """
+#     idx = id_to_idx.get(str(id_))
+#     if idx is None:
+#         return None
+#     return reference_dataset[idx]
+
+class LookupFunction:
+    def __init__(self, reference_dataset, id_column='id'):
+        """
+        Initializes the lookup function.
+
+        Args:
+            reference_dataset (datasets.Dataset): The dataset to create lookup for
+            id_column (str): Name of the ID column
+        """
+        self.reference_dataset = reference_dataset
+        self.id_to_idx = {str(id_): idx for idx, id_ in enumerate(reference_dataset[id_column])}
+
+    def __call__(self, id_):
+        """
+        Look up an item by ID.
+
+        Args:
+            id_ (str): The ID to look up
+
+        Returns:
+            dict: The dataset item with the matching ID
+        """
+        idx = self.id_to_idx.get(str(id_))
+        if idx is None:
+            return None
+        return self.reference_dataset[idx]
 
 class UnitYDataLoader:
     SAMPLE_RATE = 16_000
@@ -152,10 +179,7 @@ class UnitYDataLoader:
         self.dataset = self._load_manifest(dataset_manifest_path)
         self.cvss_dataset = cvss_dataset
         self.max_src_tokens_per_batch = max_src_tokens_per_batch
-        self.look_up_fn = create_lookup_function(
-            self.cvss_dataset
-        )
-
+        self.look_up_fn = LookupFunction(self.cvss_dataset)
 
 
     def get_dataloader(self) -> DataLoader[SeqsBatch]:
