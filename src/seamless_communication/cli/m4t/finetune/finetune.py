@@ -237,8 +237,8 @@ def main() -> None:
             float_dtype=finetune_params.float_dtype,
         ),
         dataset_manifest_path=args.train_dataset,
-        cvss_SRC_dataset=cvss_EN_train_dataset,
-        cvss_TGT_dataset=cvss_ES_train_dataset,
+        cvss_dataset=cvss_EN_train_dataset,
+
         max_src_tokens_per_batch=args.max_src_tokens)
     
     eval_dataloader = dataloader.UnitYDataLoader(
@@ -251,8 +251,7 @@ def main() -> None:
             max_audio_length_sec=75.0,
             float_dtype=finetune_params.float_dtype,
         ),
-        cvss_SRC_dataset=cvss_EN_eval_dataset,
-        cvss_TGT_dataset=cvss_ES_eval_dataset,
+        cvss_dataset=cvss_EN_eval_dataset,
         dataset_manifest_path=args.eval_dataset)
     
     finetune = trainer.UnitYFinetune(

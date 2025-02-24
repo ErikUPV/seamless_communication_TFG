@@ -90,47 +90,36 @@ class BatchingConfig:
 def worker_init_fn(worker_id: int) -> None:
     np.random.seed(np.random.get_state()[1][0] + worker_id)  # type: ignore
 
-class PairedHFDataset(Dataset):
+def create_lookup_function(reference_dataset, id_column='id'):
     """
-    Dataset class that pairs items from two Hugging Face datasets using a common ID.
+    Creates a function that efficiently looks up items in a dataset by ID.
     
     Args:
-        dataset1 (datasets.Dataset): First Hugging Face dataset
-        dataset2 (datasets.Dataset): Second Hugging Face dataset
-        id_column (str): Name of the ID column in both datasets
+        reference_dataset (datasets.Dataset): The dataset to create lookup for
+        id_column (str): Name of the ID column
+        
+    Returns:
+        function: A lookup function that takes an ID and returns the corresponding item
     """
-    def __init__(self, dataset1, dataset2, split, id_column='id'):
-        self.dataset1 = dataset1
-        self.dataset2 = dataset2
-        self.id_column = id_column
+    # Create ID to index mapping
+    id_to_idx = {str(id_): idx for idx, id_ in enumerate(reference_dataset[id_column])}
+
+    def lookup(id_):
+        """
+        Look up an item by ID.
         
-        # Convert IDs to sets for efficient lookup
-        self.ids1 = set([item['id'] for item in dataset1[split]])
-        self.ids2 = set(dataset2[id_column])
-        
-        # Find common IDs and create mappings
-        self.common_ids = sorted(self.ids1.intersection(self.ids2))
-        
-        # Create efficient lookup dictionaries
-        self.id_to_idx1 = {id_val: idx for idx, id_val in enumerate([item['id'] for item in dataset1[split]])}
-        self.id_to_idx2 = {id_val: idx for idx, id_val in enumerate(dataset2[id_column])}
-        
-    def __len__(self):
-        return len(self.common_ids)
+        Args:
+            id_ (str): The ID to look up
+            
+        Returns:
+            dict: The dataset item with the matching ID
+        """
+        idx = id_to_idx.get(str(id_))
+        if idx is None:
+            return None
+        return reference_dataset[idx]
     
-    def __getitem__(self, idx):
-        # Get the ID for this index
-        current_id = self.common_ids[idx]
-        
-        # Get corresponding indices in both datasets
-        idx1 = self.id_to_idx1[current_id]
-        idx2 = self.id_to_idx2[current_id]
-        
-        # Get items from both datasets
-        item1 = self.dataset1[idx1]
-        item2 = self.dataset2[idx2]
-        
-        return item1, item2
+    return lookup
 
 class UnitYDataLoader:
     SAMPLE_RATE = 16_000
@@ -141,8 +130,7 @@ class UnitYDataLoader:
         unit_tokenizer: UnitTokenizer,
         dataset_manifest_path: str,
         batching_config: BatchingConfig,
-        cvss_SRC_dataset,
-        cvss_TGT_dataset,
+        cvss_dataset,
         max_src_tokens_per_batch: int = 100000
     ):
         self.text_tokenizer = text_tokenizer
@@ -158,12 +146,13 @@ class UnitYDataLoader:
             "device": torch.device("cpu"),
             "dtype": self.batching_config.float_dtype,
         }
-        self.cvss_SRC_dataset = cvss_SRC_dataset
-        self.cvss_TGT_dataset = cvss_TGT_dataset
+
         self.dataset = self._load_manifest(dataset_manifest_path)
-        self.SRC_paired_dataset = PairedHFDataset(self.dataset, self.cvss_SRC_dataset, split='source')
-        self.TGT_paired_dataset = PairedHFDataset(self.dataset, self.cvss_TGT_dataset, split='target')
+        self.cvss_dataset = cvss_dataset
         self.max_src_tokens_per_batch = max_src_tokens_per_batch
+        self.look_up_fn = create_lookup_function(
+            self.cvss_dataset
+        )
 
 
 
@@ -314,7 +303,7 @@ class UnitYDataLoader:
     
 
         for sample in samples:
-            _, cvss_sample = self.SRC_paired_dataset[sample.source.id]
+            cvss_sample = self.look_up_fn(sample.source.id)
             sample.source.waveform = cvss_sample['audio']['array']
 
         
