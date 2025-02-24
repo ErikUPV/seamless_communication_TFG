@@ -92,7 +92,7 @@ class Speech2SpeechFleursDatasetBuilder:
         )
 
     def iterate_lang_audio_samples(self, part: str, lang: str, is_cvss: bool = False) -> Iterable[MultimodalSample]:
-        cf = DownloadConfig(resume_download=True, num_proc=24)
+        #cf = DownloadConfig(resume_download=True, num_proc=24)
 
         if self.dataset_name == 'google/fleurs':
             ds = load_dataset(

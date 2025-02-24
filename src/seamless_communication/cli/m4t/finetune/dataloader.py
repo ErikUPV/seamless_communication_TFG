@@ -90,6 +90,47 @@ class BatchingConfig:
 def worker_init_fn(worker_id: int) -> None:
     np.random.seed(np.random.get_state()[1][0] + worker_id)  # type: ignore
 
+class PairedHFDataset(Dataset):
+    """
+    Dataset class that pairs items from two Hugging Face datasets using a common ID.
+    
+    Args:
+        dataset1 (datasets.Dataset): First Hugging Face dataset
+        dataset2 (datasets.Dataset): Second Hugging Face dataset
+        id_column (str): Name of the ID column in both datasets
+    """
+    def __init__(self, dataset1, dataset2, id_column='id'):
+        self.dataset1 = dataset1
+        self.dataset2 = dataset2
+        self.id_column = id_column
+        
+        # Convert IDs to sets for efficient lookup
+        self.ids1 = set(dataset1[id_column])
+        self.ids2 = set(dataset2[id_column])
+        
+        # Find common IDs and create mappings
+        self.common_ids = sorted(self.ids1.intersection(self.ids2))
+        
+        # Create efficient lookup dictionaries
+        self.id_to_idx1 = {id_val: idx for idx, id_val in enumerate(dataset1[id_column])}
+        self.id_to_idx2 = {id_val: idx for idx, id_val in enumerate(dataset2[id_column])}
+        
+    def __len__(self):
+        return len(self.common_ids)
+    
+    def __getitem__(self, idx):
+        # Get the ID for this index
+        current_id = self.common_ids[idx]
+        
+        # Get corresponding indices in both datasets
+        idx1 = self.id_to_idx1[current_id]
+        idx2 = self.id_to_idx2[current_id]
+        
+        # Get items from both datasets
+        item1 = self.dataset1[idx1]
+        item2 = self.dataset2[idx2]
+        
+        return item1, item2
 
 class UnitYDataLoader:
     SAMPLE_RATE = 16_000
@@ -118,6 +159,7 @@ class UnitYDataLoader:
         }
         self.cvss_dataset = cvss_dataset
         self.dataset = self._load_manifest(dataset_manifest_path)
+        self.paired_dataset = PairedHFDataset(dataset, cvss_dataset)
         self.max_src_tokens_per_batch = max_src_tokens_per_batch
 
     def get_dataloader(self) -> DataLoader[SeqsBatch]:
@@ -266,7 +308,8 @@ class UnitYDataLoader:
         if self.cvss_dataset is not None:
             ids = [sample.source.id for sample in samples]
             cvss_filtered = self.cvss_dataset.filter(
-                lambda example: example['id'] in ids
+                lambda example: example['id'] in ids,
+                num_proc=16
             )
             for sample in samples:
                 id = sample.source.id
@@ -280,12 +323,7 @@ class UnitYDataLoader:
 
         
         #  - filter long audio samples
-        filtered_samples = [
-            sample for sample in samples if not self._is_long_src_audio(sample)
-        ]
-        samples = (
-            filtered_samples if filtered_samples else [samples[0]]
-        )  # keep at least one sample
+        # keep at least one sample
 
         is_cvss = self.cvss_dataset is not None
     
@@ -297,6 +335,12 @@ class UnitYDataLoader:
                 for sample in samples
             ]
         else:
+            filtered_samples = [
+            sample for sample in samples if not self._is_long_src_audio(sample)
+            ]
+            samples = (
+            filtered_samples if filtered_samples else [samples[0]]
+            )  
             # Load from files as before
             with_fbanks = [(sample, self._get_source_fbank(sample)) for sample in samples]
 
