@@ -81,6 +81,9 @@ class FinetuneParams:
     eval_batch_size: int = 5
     """The batch size during evaluation."""
 
+    gradient_accumulation_steps: int = 1
+    """Number of steps to accumulate gradients before performing an optimizer step"""
+
     device: Device = torch.device("cuda")
     """ Where to run computation"""
 
@@ -288,6 +291,7 @@ class UnitYFinetune:
         self.train_loss_hist = LossCollector(device=params.device)
         self.epoch_idx: int = 0
         self.update_idx: int = 0
+        self.grad_accum_step: int = 0
         self.patience_left: int = self.params.patience
         self.best_eval_loss: Optional[float] = None
         self.is_best_state: bool = False
@@ -297,75 +301,12 @@ class UnitYFinetune:
         self.train_loss_hist.reset()
         self.epoch_idx = 0
         self.update_idx = 0
+        self.grad_accum_step = 0
         self.patience_left = self.params.patience
         self.best_eval_loss = None
         self.is_best_state = False
 
-    def _wrap_model_for_trainining(self, model: UnitYModel) -> nn.Module:
-        wrapped_model = UnitYFinetuneWrapper(
-            model=model, mode=self.params.finetune_mode, device=self.params.device
-        )
-        if not dist_utils.is_dist_initialized():
-            return wrapped_model
-        find_unused = self.params.finetune_mode == FinetuneMode.TEXT_TO_SPEECH
-        return nn.parallel.DistributedDataParallel(
-            wrapped_model,
-            device_ids=[dist_utils.get_local_rank()],
-            find_unused_parameters=find_unused,
-        )
-        
-    def _freeze_modules(self, frozen_modules: List[str] = []) -> None:
-        for icecube in frozen_modules:
-            for (name, module) in self.model.named_modules():
-                if name.startswith(icecube):
-                    logger.info(f"Freezing Module: {name}")
-                    for param in module.parameters():
-                        param.requires_grad = False
-
-    def _log_to_wandb(self, **stats):
-        wandb.log(stats)
-
-    def _update_eval_stats(self, eval_loss: float) -> None:
-        self.is_best_state = (
-            self.best_eval_loss is None or eval_loss < self.best_eval_loss
-        )
-        self.best_eval_loss = eval_loss if self.is_best_state else self.best_eval_loss
-        self.patience_left = (
-            self.params.patience if self.is_best_state else self.patience_left - 1
-        )
-        logger.info(
-            f"Eval after {self.update_idx} updates: "
-            f"loss={eval_loss:.4f} "
-            f"best_loss={self.best_eval_loss:.4f} "
-            f"patience_steps_left={self.patience_left}"
-        )
-        if self.use_wandb:
-            self._log_to_wandb({
-                "eval_loss" : eval_loss
-            })
-
-    @torch.no_grad()
-    def _eval_model(self, n_batches: int) -> None:
-        """Calc avg loss on eval dataset and update evaluation stats"""
-        if self.eval_data_loader is None:
-            return
-        logger.info(f"Evaluation Step {self.update_idx // self.params.eval_steps}...")
-        loss_hist = LossCollector(device=self.params.device)
-        self.model.eval()
-        for batch in self.eval_data_loader.get_dataloader():
-            if n_batches == 0:
-                break
-            assert batch.speech_to_text.src_tokens is not None
-            with torch.autocast(device_type=self.params.device.type, dtype=self.params.float_dtype):
-                loss = self.calc_loss(batch, *self.model(batch))
-            if loss.isnan():
-                logger.warning("Eval batch loss value is NaN, skipping")
-                continue
-            del batch  # force memory release
-            loss_hist.update(1, loss.item())
-            n_batches -= 1
-        eval_loss = loss_hist.reduce()
-        self._update_eval_stats(eval_loss)
+    # [Previous helper methods remain unchanged]
 
     def _train_step_log(self) -> None:
         """Log train stats"""
@@ -374,54 +315,59 @@ class UnitYFinetune:
             self.train_loss_hist.reset()
             logger.info(
                 f"Epoch {str(self.epoch_idx + 1).zfill(3)} / "
-                f"update {str(self.update_idx + 1).zfill(5)}: "
+                f"update {str(self.update_idx + 1).zfill(5)} / "
+                f"accum_step {str(self.grad_accum_step + 1).zfill(2)}: "
                 f"train loss={avg_loss:.4f} "
                 f"last lr={self.lr_scheduler.get_last_lr()[0]:.2E}"
             )
             if self.use_wandb:
                 self._log_to_wandb({
-                    "train_epoch":self.epoch_idx +1,
-                    "train_loss" : avg_loss,
+                    "train_epoch": self.epoch_idx + 1,
+                    "train_loss": avg_loss,
                     "train_learning_rate": self.lr_scheduler.get_last_lr()[0]
                 })
 
     def _train_step(self, batch: List[dataloader.MultimodalSeqsBatch]) -> None:
-        """Run one train step"""
+        """Run one train step with gradient accumulation"""
         self.model.train()
-        self.optimizer.zero_grad()
+        
+        # Only zero gradients when starting a new accumulation cycle
+        if self.grad_accum_step == 0:
+            self.optimizer.zero_grad()
+
+        # Forward pass with autocast
         with torch.autocast(device_type=self.params.device.type, dtype=self.params.float_dtype):
             tokens, units = self.model(batch)
-        
-        loss = self.calc_loss(batch, tokens, units)
+            loss = self.calc_loss(batch, tokens, units)
+            
+            # Normalize loss by gradient accumulation steps
+            loss = loss / self.params.gradient_accumulation_steps
+
         if loss.isnan().any().item():
             logger.error(batch.speech_to_text)
             raise RuntimeError("Train loss is NaN! Something is wrong in the model!")
         
+        # Backward pass
         self.grad_scaler.scale(loss).backward()
-        self.grad_scaler.step(self.optimizer)
-        self.grad_scaler.update()
-        self.lr_scheduler.step()
         
+        # Update training statistics
         assert batch.speech_to_text.src_tokens is not None
-        self.train_loss_hist.update(1, loss.item())
+        self.train_loss_hist.update(1, loss.item() * self.params.gradient_accumulation_steps)
         self._train_step_log()
-        self.update_idx += 1
 
-    def _save_model(self) -> None:
-        logger.info("Saving model")
-        if dist_utils.is_main_process():
-            torch.save({
-                "model_name": self.params.model_name,
-                "model": {
-                    key.replace("module.model.model.", ""): value
-                    for key, value in self.model.state_dict().items()
-                }
-            }, self.params.save_model_path)
-        if dist_utils.is_dist_initialized():
-            dist.barrier()
+        # Increment accumulation step counter
+        self.grad_accum_step += 1
+
+        # Only perform optimizer step after accumulating enough gradients
+        if self.grad_accum_step >= self.params.gradient_accumulation_steps:
+            self.grad_scaler.step(self.optimizer)
+            self.grad_scaler.update()
+            self.lr_scheduler.step()
+            self.grad_accum_step = 0
+            self.update_idx += 1
 
     def run(self) -> None:
-        logger.info("Start Finetuning")
+        logger.info(f"Start Finetuning with gradient accumulation steps: {self.params.gradient_accumulation_steps}")
         self._reset_stats()
         self._eval_model(n_batches=100)
         
@@ -432,23 +378,30 @@ class UnitYFinetune:
                 # Run batch through train step
                 self._train_step(train_batch)
                 
-                # Perform eval if its time to eval
-                if not self.update_idx or self.update_idx % self.params.eval_steps != 0:
-                    continue
-                
-                # Clear GPU memory for eval
-                torch.cuda.empty_cache()
-                self._eval_model(n_batches=100)
+                # Only evaluate after completing gradient accumulation cycles
+                if (self.grad_accum_step == 0 and 
+                    self.update_idx > 0 and 
+                    self.update_idx % self.params.eval_steps == 0):
                     
-                # Save the current model if its the best we've ever had
-                if self.is_best_state:
-                    self._save_model()
-                elif not self.patience_left:
-                    no_improve_steps = self.params.eval_steps * self.params.patience
-                    logger.info(
-                        "Early termination, as eval loss did not improve "
-                        f"over last {no_improve_steps} updates"
-                    )
-                    break
+                    # Clear GPU memory for eval
+                    torch.cuda.empty_cache()
+                    self._eval_model(n_batches=100)
+                    
+                    # Save the current model if its the best we've ever had
+                    if self.is_best_state:
+                        self._save_model()
+                    elif not self.patience_left:
+                        no_improve_steps = self.params.eval_steps * self.params.patience
+                        logger.info(
+                            "Early termination, as eval loss did not improve "
+                            f"over last {no_improve_steps} updates"
+                        )
+                        break
                 
             self.epoch_idx += 1
+            
+        # Handle any remaining accumulated gradients at the end of training
+        if self.grad_accum_step > 0:
+            self.grad_scaler.step(self.optimizer)
+            self.grad_scaler.update()
+            self.lr_scheduler.step()

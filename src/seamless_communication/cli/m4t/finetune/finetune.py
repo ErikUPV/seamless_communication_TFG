@@ -148,6 +148,13 @@ def init_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="If the source dataset is CVSS, it will load the audio_arrays directly"
     )
+    parser.add_argument(
+        '--grad_accum_steps',
+        type=int,
+        default=1,
+        help="Specify the number of gradient accumulation steps"
+    )
+
     return parser
 
 
@@ -174,6 +181,7 @@ def main() -> None:
         warmup_steps=args.warmup_steps,
         eval_steps=args.eval_steps,
         log_steps=args.log_steps,
+        grad_accum_steps=args.grad_accum_steps
     )
     
     logger.info(f"Finetune Params: {finetune_params}")
