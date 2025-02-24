@@ -311,10 +311,7 @@ class UnitYDataLoader:
         # input speech
         
         #if self.cvss_dataset is not None:
-        
-        source_audio_arrays = [
-            self.paired_dataset[sample.id]['audio']['array'] for sample in samples.source
-        ]
+    
 
         for sample in samples:
             _, cvss_sample = self.SRC_paired_dataset[sample.source.id]
