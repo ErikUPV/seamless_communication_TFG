@@ -105,14 +105,14 @@ class PairedHFDataset(Dataset):
         self.id_column = id_column
         
         # Convert IDs to sets for efficient lookup
-        self.ids1 = set(dataset1[split][id_column])
+        self.ids1 = set([item['id'] for item in dataset1[split]])
         self.ids2 = set(dataset2[id_column])
         
         # Find common IDs and create mappings
         self.common_ids = sorted(self.ids1.intersection(self.ids2))
         
         # Create efficient lookup dictionaries
-        self.id_to_idx1 = {id_val: idx for idx, id_val in enumerate(dataset1[id_column])}
+        self.id_to_idx1 = {id_val: idx for idx, id_val in enumerate([item['id'] for item in dataset1[split]])}
         self.id_to_idx2 = {id_val: idx for idx, id_val in enumerate(dataset2[id_column])}
         
     def __len__(self):
