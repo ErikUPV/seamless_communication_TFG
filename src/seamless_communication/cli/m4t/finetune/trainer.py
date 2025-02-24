@@ -81,7 +81,7 @@ class FinetuneParams:
     eval_batch_size: int = 5
     """The batch size during evaluation."""
 
-    grad_accum_steps: int = 1
+    grad_accum_steps: int = 4
     """Number of steps to accumulate gradients before performing an optimizer step"""
 
     device: Device = torch.device("cuda")
@@ -390,6 +390,19 @@ class UnitYFinetune:
                     "train/train_loss": avg_loss,
                     "train_learning_rate": self.lr_scheduler.get_last_lr()[0]
                 })
+
+    def _save_model(self) -> None:
+        logger.info("Saving model")
+        if dist_utils.is_main_process():
+            torch.save({
+                "model_name": self.params.model_name,
+                "model": {
+                    key.replace("module.model.model.", ""): value
+                    for key, value in self.model.state_dict().items()
+                }
+            }, self.params.save_model_path)
+        if dist_utils.is_dist_initialized():
+            dist.barrier()
 
     def _train_step(self, batch: List[dataloader.MultimodalSeqsBatch]) -> None:
         """Run one train step with gradient accumulation"""
