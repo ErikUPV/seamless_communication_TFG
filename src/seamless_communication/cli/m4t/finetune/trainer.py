@@ -327,7 +327,7 @@ class UnitYFinetune:
                     for param in module.parameters():
                         param.requires_grad = False
 
-    def _log_to_wandb(self, **stats):
+    def _log_to_wandb(self, stats):
         wandb.log(stats)
 
     def _update_eval_stats(self, eval_loss: float) -> None:
