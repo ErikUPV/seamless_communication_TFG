@@ -306,7 +306,26 @@ class UnitYFinetune:
         self.best_eval_loss = None
         self.is_best_state = False
 
-    # [Previous helper methods remain unchanged]
+    def _wrap_model_for_trainining(self, model: UnitYModel) -> nn.Module:
+        wrapped_model = UnitYFinetuneWrapper(
+            model=model, mode=self.params.finetune_mode, device=self.params.device
+        )
+        if not dist_utils.is_dist_initialized():
+            return wrapped_model
+        find_unused = self.params.finetune_mode == FinetuneMode.TEXT_TO_SPEECH
+        return nn.parallel.DistributedDataParallel(
+            wrapped_model,
+            device_ids=[dist_utils.get_local_rank()],
+            find_unused_parameters=find_unused,
+        )
+        
+    def _freeze_modules(self, frozen_modules: List[str] = []) -> None:
+        for icecube in frozen_modules:
+            for (name, module) in self.model.named_modules():
+                if name.startswith(icecube):
+                    logger.info(f"Freezing Module: {name}")
+                    for param in module.parameters():
+                        param.requires_grad = False
 
     def _train_step_log(self) -> None:
         """Log train stats"""
