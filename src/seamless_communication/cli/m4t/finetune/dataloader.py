@@ -104,22 +104,24 @@ def create_lookup_function(reference_dataset, id_column='id'):
     # Create ID to index mapping
     id_to_idx = {str(id_): idx for idx, id_ in enumerate(reference_dataset[id_column])}
 
-    def lookup(id_):
-        """
-        Look up an item by ID.
-        
-        Args:
-            id_ (str): The ID to look up
-            
-        Returns:
-            dict: The dataset item with the matching ID
-        """
-        idx = id_to_idx.get(str(id_))
-        if idx is None:
-            return None
-        return reference_dataset[idx]
+
     
-    return lookup
+    return lambda id_: lookup(id_, reference_dataset, id_to_idx)
+
+def lookup(id_, reference_dataset, id_to_idx):
+    """
+    Look up an item by ID.
+    
+    Args:
+        id_ (str): The ID to look up
+        
+    Returns:
+        dict: The dataset item with the matching ID
+    """
+    idx = id_to_idx.get(str(id_))
+    if idx is None:
+        return None
+    return reference_dataset[idx]
 
 class UnitYDataLoader:
     SAMPLE_RATE = 16_000
