@@ -216,8 +216,12 @@ def main() -> None:
             'ebellob/cvss-c-fleurs-format-source',
             split='train'
         )
-        cvss_eval_dataset = load_dataset(
+        cvss_EN_eval_dataset = load_dataset(
             'ebellob/cvss-c-fleurs-format-target',
+            split='validation'
+        )
+        cvss_ES_eval_dataset = load_dataset(
+            'ebellob/cvss-c-fleurs-format-source',
             split='validation'
         )
 
@@ -247,7 +251,8 @@ def main() -> None:
             max_audio_length_sec=75.0,
             float_dtype=finetune_params.float_dtype,
         ),
-        cvss_dataset=cvss_eval_dataset,
+        cvss_SRC_dataset=cvss_EN_eval_dataset,
+        cvss_TGT_dataset=cvss_ES_eval_dataset,
         dataset_manifest_path=args.eval_dataset)
     
     finetune = trainer.UnitYFinetune(
