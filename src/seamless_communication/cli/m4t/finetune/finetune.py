@@ -187,6 +187,8 @@ def main() -> None:
     logger.info(f"Finetune Params: {finetune_params}")
     
     model = load_unity_model(args.model_name, device=torch.device("cpu"), dtype=torch.float16)
+
+    print(model)
     assert model.target_vocab_info == text_tokenizer.vocab_info
     
     if (
