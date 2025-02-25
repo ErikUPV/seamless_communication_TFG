@@ -220,18 +220,18 @@ def main() -> None:
             'ebellob/cvss-c-fleurs-format-target',
             split='train'
         )
-        cvss_ES_train_dataset = load_dataset(
-            'ebellob/cvss-c-fleurs-format-source',
-            split='train'
-        )
+        # cvss_ES_train_dataset = load_dataset(
+        #     'ebellob/cvss-c-fleurs-format-source',
+        #     split='train'
+        # )
         cvss_EN_eval_dataset = load_dataset(
             'ebellob/cvss-c-fleurs-format-target',
             split='validation'
         )
-        cvss_ES_eval_dataset = load_dataset(
-            'ebellob/cvss-c-fleurs-format-source',
-            split='validation'
-        )
+        # cvss_ES_eval_dataset = load_dataset(
+        #     'ebellob/cvss-c-fleurs-format-source',
+        #     split='validation'
+        # )
 
     # TODO: delete unused params to reduce GPU memory consumption
     train_dataloader = dataloader.UnitYDataLoader(
