@@ -346,7 +346,7 @@ class UnitYFinetune:
         )
         if self.use_wandb:
             self._log_to_wandb({
-                "eval_loss" : eval_loss
+                "eval/eval_loss" : eval_loss
             })
 
     @torch.no_grad()
@@ -386,9 +386,9 @@ class UnitYFinetune:
             )
             if self.use_wandb:
                 self._log_to_wandb({
-                    "train_epoch": self.epoch_idx + 1,
+                    "train/train_epoch": self.epoch_idx + 1,
                     "train/train_loss": avg_loss,
-                    "train_learning_rate": self.lr_scheduler.get_last_lr()[0]
+                    "train/train_learning_rate": self.lr_scheduler.get_last_lr()[0]
                 })
 
     def _save_model(self) -> None:
