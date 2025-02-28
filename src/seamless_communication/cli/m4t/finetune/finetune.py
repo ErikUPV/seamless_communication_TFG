@@ -151,7 +151,7 @@ def init_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--grad_accum_steps',
         type=int,
-        default=1,
+        default=4,
         help="Specify the number of gradient accumulation steps"
     )
 
@@ -181,7 +181,7 @@ def main() -> None:
         warmup_steps=args.warmup_steps,
         eval_steps=args.eval_steps,
         log_steps=args.log_steps,
-        grad_accum_steps=args.grad_accum_steps
+        grad_accum_steps=4
     )
     
     logger.info(f"Finetune Params: {finetune_params}")
