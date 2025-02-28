@@ -403,7 +403,7 @@ class UnitYFinetune:
             }, self.params.save_model_path)
         if dist_utils.is_dist_initialized():
             dist.barrier()
-
+            
     def _train_step(self, batch: List[dataloader.MultimodalSeqsBatch]) -> None:
         """Run one train step with gradient accumulation"""
         self.model.train()
@@ -417,7 +417,7 @@ class UnitYFinetune:
             tokens, units = self.model(batch)
             loss = self.calc_loss(batch, tokens, units)
             
-            # Normalize loss by gradient accumulation steps
+            # Normalize loss for gradient accumulation
             loss = loss / self.params.grad_accum_steps
 
         if loss.isnan().any().item():
@@ -427,16 +427,19 @@ class UnitYFinetune:
         # Backward pass
         self.grad_scaler.scale(loss).backward()
         
-        # Update training statistics
-        assert batch.speech_to_text.src_tokens is not None
-        self.train_loss_hist.update(1, loss.item() * self.params.grad_accum_steps)
-        self._train_step_log()
-
+        # Store the unnormalized loss for logging
+        current_loss = loss.item() * self.params.grad_accum_steps
+        
         # Increment accumulation step counter
         self.grad_accum_step += 1
 
-        # Only perform optimizer step after accumulating enough gradients
+        # Only perform optimizer step and log after accumulating enough gradients
         if self.grad_accum_step >= self.params.grad_accum_steps:
+            # Update training statistics only once per complete accumulation cycle
+            self.train_loss_hist.update(1, current_loss)
+            self._train_step_log()
+            
+            # Update model
             self.grad_scaler.step(self.optimizer)
             self.grad_scaler.update()
             self.lr_scheduler.step()
