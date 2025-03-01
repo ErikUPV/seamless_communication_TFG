@@ -344,7 +344,9 @@ class UnitYDataLoader:
 
         
         saved_sample = samples[0].source.waveform.unsqueeze(0).cpu().float(),
-        print(f"Saved sample: {saved_sample}", file="dataloder_log.txt")
+        with open('dataloader_log.txt', mode='w+') as fl:
+            
+            print(f"Saved sample: {saved_sample}", file=fl)
         #print(f"Saved sample shape: {saved_sample.shape}")
         
         
