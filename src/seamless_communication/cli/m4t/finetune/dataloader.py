@@ -348,11 +348,11 @@ class UnitYDataLoader:
         saved_sample = samples[0].source.waveform.unsqueeze(0).cpu().float()
         with open('dataloader_log.txt', mode='w+') as fl:
             
-            print(f"Saved sample: {saved_sample}", file=fl)
+            print(f"Saved sample: {saved_sample}. Its shape is {saved_sample.shape}", file=fl)
         #print(f"Saved sample shape: {saved_sample.shape}")
         
         
-        sf.write(
+        torchaudio.save(
             'audio.wav',
             saved_sample,
             samplerate=self.SAMPLE_RATE
