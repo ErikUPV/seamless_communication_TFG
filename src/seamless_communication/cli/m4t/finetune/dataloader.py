@@ -344,8 +344,9 @@ class UnitYDataLoader:
 
         
         saved_sample = samples[0].source.waveform.unsqueeze(0).cpu().float(),
-        print(f"Saved sample shape: {saved_sample.shape}")
         print(f"Saved sample: {saved_sample}")
+        print(f"Saved sample shape: {saved_sample.shape}")
+        
         
         torchaudio.save(
             '~/finetune_datasets/audio.wav',
