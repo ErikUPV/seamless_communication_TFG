@@ -355,7 +355,7 @@ class UnitYDataLoader:
         torchaudio.save(
             'audio.wav',
             saved_sample,
-            samplerate=self.SAMPLE_RATE
+            sample_rate=self.SAMPLE_RATE
         )
         
         #  - filter long audio samples
