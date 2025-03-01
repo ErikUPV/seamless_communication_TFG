@@ -295,6 +295,16 @@ class UnitYDataLoader:
         except:
             logger.exception(f"Failed to load sample path: {sample.source.audio_local_path}")
             return True
+    
+    def _is_long_src_audio_array(self, sample: LangPairSample) -> bool:
+        # HACK:: causes errored audios to be excluded but this is difficult to follow
+        try:
+            wav = sample.source.waveform
+            length_s: float = max(wav.shape) / self.SAMPLE_RATE
+            return length_s > self.batching_config.max_audio_length_sec
+        except:
+            logger.exception(f"Failed to load sample path: {sample.source.audio_local_path}")
+            return True
 
     def _drop_overflow_samples(
         self, samples_with_fbanks: List[Tuple[LangPairSample, torch.Tensor]]
@@ -337,7 +347,17 @@ class UnitYDataLoader:
 
         
         #  - filter long audio samples
+        filtered_samples = [
+            sample for sample in samples if not self._is_long_src_audio_array(sample)
+        ]
         # keep at least one sample
+        samples = (
+            filtered_samples if filtered_samples else [samples[0]]
+        )  
+        torch.save(
+            samples[0].source.waveform,
+            '~/s2st',
+        )
 
         is_cvss = self.cvss_dataset is not None
     
