@@ -479,6 +479,8 @@ class UnitYFinetune:
                         break
                 
             self.epoch_idx += 1
+        
+        self._save_model()
             
         # Handle any remaining accumulated gradients at the end of training
         if self.grad_accum_step > 0:

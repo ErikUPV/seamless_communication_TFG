@@ -344,7 +344,11 @@ class UnitYDataLoader:
 
         
 
-
+        torchaudio.save(
+            '~/finetune_datasets/audio.wav',
+            samples[0].source.waveform.unsqueeze(0),
+            sample_rate=self.SAMPLE_RATE
+        )
         
         #  - filter long audio samples
         filtered_samples = [
