@@ -343,7 +343,7 @@ class UnitYDataLoader:
             sample.source.waveform = torch.tensor(cvss_sample['audio']['array'])
 
         
-        saved_sample = samples[0].source.waveform.unsqueeze(0).cpu().float()[0],
+        saved_sample = samples[0].source.waveform.unsqueeze(0).cpu().float()
         with open('dataloader_log.txt', mode='w+') as fl:
             
             print(f"Saved sample: {saved_sample}", file=fl)
