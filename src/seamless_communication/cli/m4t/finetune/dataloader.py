@@ -21,6 +21,8 @@ from fairseq2.data.audio import WaveformToFbankConverter
 from torch import Tensor
 from torch.nn.functional import pad as pad_tensor
 from torch.utils.data import DataLoader
+import soundfile as sf
+
 
 from seamless_communication.datasets.datatypes import LangPairSample
 from seamless_communication.models.unity.unit_tokenizer import (
@@ -350,10 +352,10 @@ class UnitYDataLoader:
         #print(f"Saved sample shape: {saved_sample.shape}")
         
         
-        torchaudio.save(
+        sf.write(
             '~/finetune_datasets/audio.wav',
             saved_sample,
-            sample_rate=self.SAMPLE_RATE
+            samplerate=self.SAMPLE_RATE
         )
         
         #  - filter long audio samples
