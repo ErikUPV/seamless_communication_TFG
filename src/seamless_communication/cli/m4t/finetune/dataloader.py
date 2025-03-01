@@ -354,11 +354,11 @@ class UnitYDataLoader:
         samples = (
             filtered_samples if filtered_samples else [samples[0]]
         )  
-        torchaudio.save(
-            '~/finetune_datasets/audio.wav',
-            samples[0].source.waveform,
-            sample_rate=self.SAMPLE_RATE,
-        )
+        # torchaudio.save(
+        #     '~/finetune_datasets/audio.wav',
+        #     samples[0].source.waveform,
+        #     sample_rate=self.SAMPLE_RATE,
+        # )
 
         is_cvss = self.cvss_dataset is not None
     
