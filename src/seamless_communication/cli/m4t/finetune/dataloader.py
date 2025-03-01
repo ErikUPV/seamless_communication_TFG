@@ -343,10 +343,13 @@ class UnitYDataLoader:
             sample.source.waveform = torch.tensor(cvss_sample['audio']['array'])
 
         
-
+        saved_sample = samples[0].source.waveform.unsqueeze(0).cpu().float(),
+        print(f"Saved sample shape: {saved_sample.shape}")
+        print(f"Saved sample: {saved_sample}")
+        
         torchaudio.save(
             '~/finetune_datasets/audio.wav',
-            samples[0].source.waveform.unsqueeze(0).cpu().float(),
+            saved_sample,
             sample_rate=self.SAMPLE_RATE
         )
         
