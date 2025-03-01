@@ -353,7 +353,7 @@ class UnitYDataLoader:
         
         
         sf.write(
-            '~/finetune_datasets/audio.wav',
+            'audio.wav',
             saved_sample,
             samplerate=self.SAMPLE_RATE
         )
