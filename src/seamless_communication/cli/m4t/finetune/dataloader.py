@@ -346,7 +346,7 @@ class UnitYDataLoader:
 
         torchaudio.save(
             '~/finetune_datasets/audio.wav',
-            samples[0].source.waveform.unsqueeze(0),
+            samples[0].source.waveform.unsqueeze(0).cpu().float(),
             sample_rate=self.SAMPLE_RATE
         )
         
