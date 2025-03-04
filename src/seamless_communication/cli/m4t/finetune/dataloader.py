@@ -181,7 +181,7 @@ class UnitYDataLoader:
         self.dataset = self._load_manifest(dataset_manifest_path)
         self.cvss_dataset = cvss_dataset
         self.max_src_tokens_per_batch = max_src_tokens_per_batch
-        self.look_up_fn = LookupFunction(self.cvss_dataset)
+        self.look_up_fn = LookupFunction(self.cvss_dataset) if cvss_dataset is not None else None
 
 
     def get_dataloader(self) -> DataLoader[SeqsBatch]:
