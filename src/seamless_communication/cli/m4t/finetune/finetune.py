@@ -215,7 +215,7 @@ def main() -> None:
         }
     )
 
-    cvss_train_dataset, cvss_eval_dataset = None, None
+    cvss_EN_train_dataset, cvss_EN_eval_dataset = None, None
 
     if args.is_source_cvss:
         cvss_EN_train_dataset = load_dataset(
