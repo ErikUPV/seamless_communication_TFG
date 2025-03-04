@@ -9,6 +9,8 @@ import logging
 import os
 from pathlib import Path
 import wandb
+from typing import Any, Dict
+
 
 import torch
 from datasets import load_dataset
@@ -19,6 +21,7 @@ from seamless_communication.models.unity import (
     load_unity_text_tokenizer,
     load_unity_unit_tokenizer,
 )
+from seamless_communication.models.unity import UnitYModel
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,6 +30,25 @@ logging.basicConfig(
 
 logger = logging.getLogger("finetune")
 
+
+def load_checkpoint(model: UnitYModel, path: str, device = torch.device("cpu")) -> None:
+    saved_model = torch.load(path, map_location=device)["model"]
+    saved_model = { k.replace("model.", ""): v for k, v in saved_model.items() }
+
+    def _select_keys(state_dict: Dict[str, Any], prefix: str) -> Dict[str, Any]:
+        return {key.replace(prefix, ""): value for key, value in state_dict.items() if key.startswith(prefix)}
+
+    model.speech_encoder_frontend.load_state_dict(_select_keys(saved_model, "model.speech_encoder_frontend."))
+    model.speech_encoder.load_state_dict(_select_keys(saved_model, "model.speech_encoder."))
+
+    assert model.text_decoder_frontend is not None
+    model.text_decoder_frontend.load_state_dict(_select_keys(saved_model, "model.text_decoder_frontend."))
+
+    assert model.text_decoder is not None
+    model.text_decoder.load_state_dict(_select_keys(saved_model, "model.text_decoder."))
+
+    assert model.final_proj is not None
+    model.final_proj.load_state_dict(_select_keys(saved_model, "model.final_proj."))
 
 def init_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -37,6 +59,13 @@ def init_parser() -> argparse.ArgumentParser:
         type=Path,
         required=True,
         help="Path to manifest with train samples",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        required=False,
+        help="Load model checkpoint for further finetuning",
+        default=None
     )
     parser.add_argument(
         "--eval_dataset",
@@ -187,7 +216,10 @@ def main() -> None:
     logger.info(f"Finetune Params: {finetune_params}")
     
     model = load_unity_model(args.model_name, device=torch.device("cpu"), dtype=torch.float16)
-
+    
+    if args.checkpoint:
+        load_checkpoint(model, args.checkpoint)
+    
     print(model)
     assert model.target_vocab_info == text_tokenizer.vocab_info
     
