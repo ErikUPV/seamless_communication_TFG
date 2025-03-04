@@ -336,45 +336,25 @@ class UnitYDataLoader:
     def _prepare_batch(self, raw_samples: List[Dict[str, Any]]) -> MultimodalSeqsBatch:
         samples = [LangPairSample.from_json(sample) for sample in raw_samples]
         # input speech
-        
+        is_cvss = self.cvss_dataset is not None
         #if self.cvss_dataset is not None:
     
-
-        for sample in samples:
-            cvss_sample = self.look_up_fn(sample.source.id)
-            sample.source.waveform = torch.tensor(cvss_sample['audio']['array'])
-
-        
-        saved_sample = samples[0].source.waveform.unsqueeze(0).cpu().float()
-        with open('dataloader_log.txt', mode='w+') as fl:
-            
-            print(f"Saved sample: {saved_sample}. Its shape is {saved_sample.shape}", file=fl)
-        #print(f"Saved sample shape: {saved_sample.shape}")
-        
-        
-        torchaudio.save(
-            'audio.wav',
-            saved_sample,
-            sample_rate=self.SAMPLE_RATE
-        )
-        
-        #  - filter long audio samples
-        filtered_samples = [
-            sample for sample in samples if not self._is_long_src_audio_array(sample)
-        ]
-        # keep at least one sample
-        samples = (
-            filtered_samples if filtered_samples else [samples[0]]
-        )  
-        # torchaudio.save(
-        #     '~/finetune_datasets/audio.wav',
-        #     samples[0].source.waveform,
-        #     sample_rate=self.SAMPLE_RATE,
-        # )
-
-        is_cvss = self.cvss_dataset is not None
-    
         if is_cvss:
+            for sample in samples:
+                cvss_sample = self.look_up_fn(sample.source.id)
+                sample.source.waveform = torch.tensor(cvss_sample['audio']['array'])
+
+            
+            
+            
+            #  - filter long audio samples
+            filtered_samples = [
+                sample for sample in samples if not self._is_long_src_audio_array(sample)
+            ]
+            # keep at least one sample
+            samples = (
+                filtered_samples if filtered_samples else [samples[0]]
+            )  
             # Load directly from arrays
             with_fbanks = [
                 (sample, self._get_source_fbank_from_array(
