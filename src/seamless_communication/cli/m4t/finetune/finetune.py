@@ -217,8 +217,32 @@ def main() -> None:
     
     model = load_unity_model(args.model_name, device=torch.device("cpu"), dtype=torch.float16)
     
-    if args.checkpoint:
-        load_checkpoint(model, args.checkpoint)
+    print("Loading checkpoint...")
+    if args.checkpoint is not None: 
+        st_dict = torch.load(args.checkpoint)
+    
+        # Get model name from state dict or use default
+        model_name = st_dict.get('model_name', 'seamlessM4T_large')
+        print(f"Using model: {model_name}")
+    else:
+        model_name = 'seamlessM4T_large'
+    if args.checkpoint is not None:
+        # Need to handle the module.model prefix in state dict keys
+        print("Adapting checkpoint state dict...")
+        # Create a new state dict with corrected keys
+        new_state_dict = {}
+        for key, value in st_dict['model'].items():
+            # Remove 'module.model.' prefix
+            if key.startswith('module.model.'):
+                new_key = key[len('module.model.'):]
+                new_state_dict[new_key] = value
+            else:
+                new_state_dict[key] = value
+        
+        # Load the adapted state dict
+        print("Loading model weights...")
+        model.load_state_dict(new_state_dict, strict=False)
+        
     
     print(model)
     assert model.target_vocab_info == text_tokenizer.vocab_info
