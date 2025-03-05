@@ -8,6 +8,7 @@
 import logging
 import os
 from abc import abstractmethod
+from pathlib import Path
 from typing import Dict, Iterable, Optional
 
 import numpy as np
@@ -41,6 +42,8 @@ class Speech2SpeechFleursDatasetBuilder:
         audio_dtype: torch.dtype = torch.float32,
         dataset_cache_dir: Optional[str] = None,
         speech_tokenizer: Optional[SpeechTokenizer] = None,
+        source_dataset_path: Optional[Path] = None,
+        target_dataset_path: Optional[Path] = None,
     ):
         self.source_lang = source_lang
         self.target_lang = target_lang
@@ -51,6 +54,9 @@ class Speech2SpeechFleursDatasetBuilder:
         self.skip_target_audio = skip_target_audio
         self.speech_tokenizer = speech_tokenizer
         self.dataset_name = dataset_name
+        self.source_dataset_path = source_dataset_path
+        self.target_dataset_path = target_dataset_path
+
 
     def _prepare_sample(
         self,
@@ -104,23 +110,23 @@ class Speech2SpeechFleursDatasetBuilder:
                 trust_remote_code=True,
             )
         if is_cvss and part == 'source':
-#            ds = load_from_disk('~/s2st/fleurs_source')[self.split]
-            ds = load_dataset(
-                'ebellob/cvss-c-fleurs-format-source',
-                split=self.split,
-                streaming=False,
-                trust_remote_code=True,
-                num_proc=12
-            )
+            ds = load_from_disk(self.source_dataset_path)[self.split]
+            # ds = load_dataset(
+            #     'ebellob/cvss-c-fleurs-format-source',
+            #     split=self.split,
+            #     streaming=False,
+            #     trust_remote_code=True,
+            #     num_proc=12
+            # )
         elif is_cvss and part == 'target':
-#            ds = load_from_disk('~/s2st/fleurs_target')[self.split]
-            ds = load_dataset(
-                'ebellob/cvss-c-fleurs-format-target',
-                split=self.split,
-                streaming=False,
-                trust_remote_code=True,
-                num_proc=12
-            )
+            ds = load_from_disk(self.target_dataset_path)[self.split]
+            # ds = load_dataset(
+            #     'ebellob/cvss-c-fleurs-format-target',
+            #     split=self.split,
+            #     streaming=False,
+            #     trust_remote_code=True,
+            #     num_proc=12
+            # )
         for item in ds:
             #print(ds)
             audio_path = os.path.join(
