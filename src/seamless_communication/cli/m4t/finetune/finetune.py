@@ -286,7 +286,7 @@ def main() -> None:
         #     'ebellob/cvss-c-fleurs-format-source',
         #     split='train'
         # )
-        cvss_src_train_dataset = load_from_disk(args.src_path)['validation']
+        cvss_src_eval_dataset = load_from_disk(args.src_path)['validation']
 
         # cvss_ES_eval_dataset = load_dataset(
         #     'ebellob/cvss-c-fleurs-format-source',
