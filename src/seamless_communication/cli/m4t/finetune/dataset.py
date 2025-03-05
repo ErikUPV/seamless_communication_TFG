@@ -11,6 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Optional
 from tqdm import tqdm
 
 import torch
@@ -129,7 +130,9 @@ def download_fleurs(
     target_lang: str,
     split: str,
     save_directory: str,
-    dataset_name: str
+    dataset_name: str,
+    source_dataset_path: Optional[Path] = None,
+    target_dataset_path: Optional[Path] = None
 ):
     _check_lang_code_mapping(source_lang)
     _check_lang_code_mapping(target_lang)
@@ -145,7 +148,9 @@ def download_fleurs(
         skip_source_audio=True,  # don't extract units from source audio
         skip_target_audio=False,
         split=split,
-        dataset_name=dataset_name
+        dataset_name=dataset_name,
+        source_dataset_path=source_dataset_path,
+        target_dataset_path=target_dataset_path,
     )
     manifest_path: str = os.path.join(save_directory, f"{split}_manifest.json")
     with open(manifest_path, "w") as fp_out:
@@ -228,6 +233,20 @@ def init_parser() -> argparse.ArgumentParser:
         default=None,
         help="Your HuggingFace token, this is necessary for some datasets like GigaSpeech.",
     )
+    parser.add_argument(
+        '--src_path',
+        type=str,
+        required=False,
+        default=None,
+        help="In case you want to load local datasets, add source dataset path"
+    )
+    parser.add_argument(
+        '--tgt_path',
+        type=str,
+        required=False,
+        default=None,
+        help="In case you want to load local datasets, add target dataset path"
+    )
     return parser
 
 
@@ -237,8 +256,10 @@ def main() -> None:
     assert args.name in SUPPORTED_DATASETS, \
         f"The only supported datasets are `{SUPPORTED_DATASETS}`. Please use one of these in `--name`."
 
-    if args.name == 'google/fleurs' or args.name == 'erik/cvss-c':
+    if args.name == 'google/fleurs':
         download_fleurs(args.source_lang, args.target_lang, args.split, args.save_dir, args.name)
+    elif args.name == 'erik/cvss-c':
+         download_fleurs(args.source_lang, args.target_lang, args.split, args.save_dir, args.name, source_dataset_path=args.src_path, target_dataset_path=args.tgt_path)
     elif args.name == 'speechcolab/gigaspeech':
         assert args.huggingface_token is not None, \
             "Your HuggingFace token is necessary for GigaSpeech. Please read the GigaSpeech agreement."
