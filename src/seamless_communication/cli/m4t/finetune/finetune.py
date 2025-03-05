@@ -13,7 +13,7 @@ from typing import Any, Dict
 
 
 import torch
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 
 from seamless_communication.cli.m4t.finetune import dataloader, dist_utils, trainer
 from seamless_communication.models.unity import (
@@ -178,6 +178,12 @@ def init_parser() -> argparse.ArgumentParser:
         help="If the source dataset is CVSS, it will load the audio_arrays directly"
     )
     parser.add_argument(
+        '--src_path',
+        type=str,
+        help="Path of the target dataset",
+        default=None
+    )
+    parser.add_argument(
         '--grad_accum_steps',
         type=int,
         default=4,
@@ -272,21 +278,16 @@ def main() -> None:
         }
     )
 
-    cvss_EN_train_dataset, cvss_EN_eval_dataset = None, None
+    cvss_src_train_dataset, cvss_src_eval_dataset = None, None
 
     if args.is_source_cvss:
-        cvss_EN_train_dataset = load_dataset(
-            'ebellob/cvss-c-fleurs-format-target',
-            split='train'
-        )
+        cvss_src_train_dataset = load_from_disk(args.src_path)['train']
         # cvss_ES_train_dataset = load_dataset(
         #     'ebellob/cvss-c-fleurs-format-source',
         #     split='train'
         # )
-        cvss_EN_eval_dataset = load_dataset(
-            'ebellob/cvss-c-fleurs-format-target',
-            split='validation'
-        )
+        cvss_src_train_dataset = load_from_disk(args.src_path)['validation']
+
         # cvss_ES_eval_dataset = load_dataset(
         #     'ebellob/cvss-c-fleurs-format-source',
         #     split='validation'
@@ -304,7 +305,7 @@ def main() -> None:
             float_dtype=finetune_params.float_dtype,
         ),
         dataset_manifest_path=args.train_dataset,
-        cvss_dataset=cvss_EN_train_dataset,
+        cvss_dataset=cvss_src_train_dataset,
 
         max_src_tokens_per_batch=args.max_src_tokens)
     
@@ -318,7 +319,7 @@ def main() -> None:
             max_audio_length_sec=75.0,
             float_dtype=finetune_params.float_dtype,
         ),
-        cvss_dataset=cvss_EN_eval_dataset,
+        cvss_dataset=cvss_src_eval_dataset,
         dataset_manifest_path=args.eval_dataset)
     
     finetune = trainer.UnitYFinetune(
