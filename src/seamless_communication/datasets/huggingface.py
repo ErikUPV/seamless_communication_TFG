@@ -153,7 +153,7 @@ class Speech2SpeechFleursDatasetBuilder:
                 sampling_rate=sampling_rate,
                 text=text,
                 lang=lang,
-                tts_target = (part == 'target') and self.source_lang == self.target_lang
+                tts_target = (part == 'target')
             )
 
     def __iter__(self, is_cvss=False) -> Iterable[LangPairSample]:
