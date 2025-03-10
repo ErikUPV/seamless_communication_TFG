@@ -68,8 +68,8 @@ class Speech2SpeechFleursDatasetBuilder:
         sampling_rate: Optional[int] = None,
     ) -> MultimodalSample:
         should_skip_audio = (
-            lang == self.target_lang
-            and self.skip_target_audio
+            #lang == self.target_lang
+            self.skip_target_audio
             or lang == self.source_lang
             and self.skip_source_audio
             or waveform_npy is None
