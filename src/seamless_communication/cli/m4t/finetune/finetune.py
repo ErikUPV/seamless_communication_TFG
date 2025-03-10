@@ -268,9 +268,9 @@ def main() -> None:
 
     if args.use_wandb:
         wandb.init(
-        project="seamless-m4t-medium-finetune",
+        project="seamless-m4t-t2u-finetune",
         config={
-            "model": "seamless-m4t-medium",
+            "model": "seamless-m4t-large",
             "learning_rate": args.learning_rate,
             "batch_size": args.batch_size,
             "max_epochs":args.max_epochs,
@@ -292,6 +292,7 @@ def main() -> None:
         #     'ebellob/cvss-c-fleurs-format-source',
         #     split='validation'
         # )
+        cvss_src_eval_dataset = cvss_src_train_dataset
 
     # TODO: delete unused params to reduce GPU memory consumption
     train_dataloader = dataloader.UnitYDataLoader(
