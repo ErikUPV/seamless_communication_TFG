@@ -74,9 +74,8 @@ class Speech2SpeechFleursDatasetBuilder:
             or lang == self.source_lang
             and self.skip_source_audio
             or waveform_npy is None
-        ) or (
-            not tts_target
         )
+        if tts_target: should_skip_audio = False
         if not should_skip_audio:
             waveform = torch.from_numpy(waveform_npy).to(self.audio_dtype)
         else:
