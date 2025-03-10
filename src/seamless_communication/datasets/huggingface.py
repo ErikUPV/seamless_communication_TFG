@@ -66,13 +66,16 @@ class Speech2SpeechFleursDatasetBuilder:
         audio_local_path: Optional[str] = None,
         waveform_npy: Optional[np.ndarray] = None,
         sampling_rate: Optional[int] = None,
+        tts_target: bool = False
     ) -> MultimodalSample:
         should_skip_audio = (
-            #lang == self.target_lang
-            self.skip_target_audio
+            lang == self.target_lang
+            and self.skip_target_audio
             or lang == self.source_lang
             and self.skip_source_audio
             or waveform_npy is None
+        ) or (
+            tts_target
         )
         if not should_skip_audio:
             waveform = torch.from_numpy(waveform_npy).to(self.audio_dtype)
@@ -150,6 +153,7 @@ class Speech2SpeechFleursDatasetBuilder:
                 sampling_rate=sampling_rate,
                 text=text,
                 lang=lang,
+                tts_target = (part == 'target') and self.source_lang == self.target_lang
             )
 
     def __iter__(self, is_cvss=False) -> Iterable[LangPairSample]:
