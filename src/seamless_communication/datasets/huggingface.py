@@ -133,7 +133,7 @@ class Speech2SpeechFleursDatasetBuilder:
             #print(ds)
             audio_path = os.path.join(
                 os.path.dirname(item["path"]), item["audio"]["path"]
-            )
+            ) if item['audio']['path'] is not None else ''
             (sample_id, audio_local_path, waveform, sampling_rate, text) = (
                 item["id"],
                 audio_path,
