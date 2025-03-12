@@ -292,7 +292,8 @@ def main() -> None:
         #     'ebellob/cvss-c-fleurs-format-source',
         #     split='validation'
         # )
-        cvss_src_eval_dataset = cvss_src_train_dataset
+        cvss_src_eval_dataset = load_from_disk(args.src_path)['validation']
+
 
     # TODO: delete unused params to reduce GPU memory consumption
     train_dataloader = dataloader.UnitYDataLoader(
