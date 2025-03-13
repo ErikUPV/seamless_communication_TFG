@@ -281,8 +281,7 @@ def main() -> None:
     cvss_src_train_dataset, cvss_src_eval_dataset = None, None
 
     if args.is_source_cvss:
-        cvss_src_train_dataset = load_from_disk(args.src_path)['train'].cast_column('id', int)
-        # cvss_ES_train_dataset = load_dataset(
+        cvss_src_train_dataset = load_from_disk(args.src_path)['train']
         #     'ebellob/cvss-c-fleurs-format-source',
         #     split='train'
         # )
@@ -292,7 +291,7 @@ def main() -> None:
         #     'ebellob/cvss-c-fleurs-format-source',
         #     split='validation'
         # )
-        cvss_src_eval_dataset = load_from_disk(args.src_path)['validation'].cast_column('id', int)
+        cvss_src_eval_dataset = load_from_disk(args.src_path)['validation']
 
 
     # TODO: delete unused params to reduce GPU memory consumption
