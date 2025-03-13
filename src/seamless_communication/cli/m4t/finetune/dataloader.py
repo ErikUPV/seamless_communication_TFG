@@ -341,7 +341,7 @@ class UnitYDataLoader:
     
         if is_cvss:
             for sample in samples:
-                cvss_sample = self.look_up_fn(sample.source.id)
+                cvss_sample = self.look_up_fn(sample.source.id.item())
                 sample.source.waveform = torch.tensor(cvss_sample['audio']['array'])
 
             
