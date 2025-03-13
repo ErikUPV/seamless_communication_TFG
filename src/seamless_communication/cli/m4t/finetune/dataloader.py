@@ -340,9 +340,11 @@ class UnitYDataLoader:
         # input speech
         is_cvss = self.cvss_dataset is not None
         #if self.cvss_dataset is not None:
-    
+
         if is_cvss:
             for sample in samples:
+                print(f"Surce sample id = {sample.source.id}")
+
                 cvss_sample = self.look_up_fn(sample.source.id)
                 sample.source.waveform = torch.tensor(cvss_sample['audio']['array'])
 
