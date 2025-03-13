@@ -347,6 +347,7 @@ class UnitYDataLoader:
                 print(f"Surce sample id = {sample.source.id}")
 
                 cvss_sample = self.look_up_fn(sample.source.id)
+                if cvss_sample is None: continue
                 sample.source.waveform = torch.tensor(cvss_sample['audio']['array'])
 
             
