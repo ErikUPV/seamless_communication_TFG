@@ -148,6 +148,7 @@ class LookupFunction:
             dict: The dataset item with the matching ID
         """
         idx = self.id_to_idx.get(str(id_))
+        print(f"IDX IS {idx}.")
         if idx is None:
             return None
         return self.reference_dataset[idx]
