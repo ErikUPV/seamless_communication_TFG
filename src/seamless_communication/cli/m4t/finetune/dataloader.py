@@ -148,7 +148,6 @@ class LookupFunction:
             dict: The dataset item with the matching ID
         """
         idx = self.id_to_idx.get(str(id_))
-        print(f"IDX IS {idx}.")
         if idx is None:
             return None
         return self.reference_dataset[idx]
@@ -183,7 +182,6 @@ class UnitYDataLoader:
         self.cvss_dataset = cvss_dataset
         self.max_src_tokens_per_batch = max_src_tokens_per_batch
         self.look_up_fn = LookupFunction(self.cvss_dataset) if cvss_dataset is not None else None
-        print(f"Item: {self.look_up_fn(9172)}")
         #print(self.look_up_fn.id_to_idx)
 
 
@@ -344,7 +342,6 @@ class UnitYDataLoader:
 
         if is_cvss:
             for sample in samples:
-                print(f"Surce sample id = {sample.source.id}")
 
                 cvss_sample = self.look_up_fn(sample.source.id)
                 if cvss_sample is None: continue
