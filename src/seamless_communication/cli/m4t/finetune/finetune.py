@@ -270,12 +270,13 @@ def main() -> None:
         wandb.init(
         project="seamless-m4t-t2u-finetune",
         config={
-            "model": "seamless-m4t-large",
+            "model": args.model_name,
             "learning_rate": args.learning_rate,
             "batch_size": args.batch_size,
             "max_epochs":args.max_epochs,
             "dataset":"CVSS"
-        }
+        },
+        name=args.model_name
     )
 
     cvss_src_train_dataset, cvss_src_eval_dataset = None, None
