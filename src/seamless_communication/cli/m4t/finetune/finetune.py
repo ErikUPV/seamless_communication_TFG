@@ -189,6 +189,11 @@ def init_parser() -> argparse.ArgumentParser:
         default=4,
         help="Specify the number of gradient accumulation steps"
     )
+    parser.add_argument(
+        '--force_save',
+        action='store_true',
+        help=('Force saving the model at end even if the eval loss is not improved')
+    )
 
     return parser
 
@@ -330,7 +335,9 @@ def main() -> None:
         train_data_loader=train_dataloader,
         eval_data_loader=eval_dataloader,
         freeze_modules=args.freeze_layers,
-        use_wandb=args.use_wandb)
+        use_wandb=args.use_wandb,
+        force_save=args.force_save
+        )
         
     
     finetune.run()
