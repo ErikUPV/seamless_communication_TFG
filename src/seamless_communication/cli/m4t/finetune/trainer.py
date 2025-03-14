@@ -253,7 +253,8 @@ class UnitYFinetune:
         train_data_loader: dataloader.UnitYDataLoader,
         eval_data_loader: Optional[dataloader.UnitYDataLoader] = None,
         freeze_modules: Optional[List[Union[str, torch.nn.Module]]] = None,
-        use_wandb: Optional[bool] = False
+        use_wandb: Optional[bool] = False,
+        force_save: Optional[bool] = False,
     ):
         self.use_wandb = use_wandb
         self.params = params
@@ -269,6 +270,7 @@ class UnitYFinetune:
         if freeze_modules:
             self._freeze_modules(freeze_modules)
         
+        self.force_save = force_save
         self.train_data_loader = train_data_loader
         self.eval_data_loader = eval_data_loader
         
@@ -480,6 +482,8 @@ class UnitYFinetune:
                 
             self.epoch_idx += 1
         
+        if self.force_save:
+            self._save_model()
             
         # Handle any remaining accumulated gradients at the end of training
         if self.grad_accum_step > 0:
