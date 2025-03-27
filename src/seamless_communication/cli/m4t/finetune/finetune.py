@@ -183,6 +183,12 @@ def init_parser() -> argparse.ArgumentParser:
         nargs='*',
     )
     parser.add_argument(
+        '--wandb_run_name',
+        type=str,
+        default='seamless-m4t-v1-large',
+        help="Wandb run name"
+    )
+    parser.add_argument(
         '--is_source_cvss',
         action="store_true",
         help="If the source dataset is CVSS, it will load the audio_arrays directly"
@@ -291,7 +297,7 @@ def main() -> None:
             "max_epochs":args.max_epochs,
             "dataset":"Europarl-ST"
         },
-        name=args.model_name,
+        name=args.wandb_run_name,
         tags=args.wandb_tags
     )
 
