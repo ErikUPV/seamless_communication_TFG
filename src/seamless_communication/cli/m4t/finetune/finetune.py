@@ -314,7 +314,7 @@ def main() -> None:
         #     'ebellob/cvss-c-fleurs-format-source',
         #     split='validation'
         # )
-        cvss_src_eval_dataset = load_from_disk(args.src_path)['validation']
+        cvss_src_eval_dataset = load_from_disk(args.src_path)['valid']
 
 
     # TODO: delete unused params to reduce GPU memory consumption
