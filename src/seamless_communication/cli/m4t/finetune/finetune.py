@@ -173,6 +173,16 @@ def init_parser() -> argparse.ArgumentParser:
         help=("Activate usage of wandb to report training metrics. Log into wandb by yourself via console.")
     )
     parser.add_argument(
+        '--wandb_project_name',
+        type=str,
+        default="seamless-m4t-large-finetune",
+        help="Wandb project name"
+    )
+    parser.add_argument(
+        '--wandb_tags',
+        nargs='*',
+    )
+    parser.add_argument(
         '--is_source_cvss',
         action="store_true",
         help="If the source dataset is CVSS, it will load the audio_arrays directly"
@@ -273,15 +283,16 @@ def main() -> None:
 
     if args.use_wandb:
         wandb.init(
-        project="seamless-m4t-t2u-finetune",
+        project=args.wandb_project_name,
         config={
             "model": args.model_name,
             "learning_rate": args.learning_rate,
             "batch_size": args.batch_size,
             "max_epochs":args.max_epochs,
-            "dataset":"CVSS"
+            "dataset":"Europarl-ST"
         },
-        name=args.model_name
+        name=args.model_name,
+        tags=args.wandb_tags
     )
 
     cvss_src_train_dataset, cvss_src_eval_dataset = None, None
