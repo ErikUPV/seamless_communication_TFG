@@ -112,30 +112,14 @@ class Speech2SpeechFleursDatasetBuilder:
                 trust_remote_code=True,
             )
         if is_cvss and part == 'source':
+            ds = load_from_disk(self.source_dataset_path)
             if isinstance(ds, DatasetDict):
-                ds = load_from_disk(self.source_dataset_path)[self.split]
-            else:
-                ds = load_from_disk(self.source_dataset_path)
-#            ds = load_from_disk('~/s2st/fleurs_source')[self.split]
-            # ds = load_dataset(
-            #     'ebellob/cvss-c-fleurs-format-source',
-            #     split=self.split,
-            #     streaming=False,
-            #     trust_remote_code=True,
-            #     num_proc=12
-            # )
-            
+                ds = ds[self.split]            
         elif is_cvss and part == 'target':
+            ds = load_from_disk(self.target_dataset_path)
             if isinstance(ds, DatasetDict):
-                ds = load_from_disk(self.target_dataset_path)[self.split]
-            else:
-                ds = load_from_disk(self.target_dataset_path)
-            #     'ebellob/cvss-c-fleurs-format-target',
-            #     split=self.split,
-            #     streaming=False,
-            #     trust_remote_code=True,
-            #     num_proc=12
-            # )
+                ds = ds[self.split]       
+                
         for item in ds:
             #print(ds)
             audio_path = os.path.join(
