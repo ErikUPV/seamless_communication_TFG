@@ -13,7 +13,7 @@ from typing import Dict, Iterable, Optional
 
 import numpy as np
 import torch
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset, load_from_disk, DatasetDict
 
 from .datatypes import LangPairSample, MultimodalSample
 
@@ -112,7 +112,11 @@ class Speech2SpeechFleursDatasetBuilder:
                 trust_remote_code=True,
             )
         if is_cvss and part == 'source':
-            ds = load_from_disk(self.source_dataset_path)[self.split]
+            if isinstance(ds, DatasetDict)
+                ds = load_from_disk(self.source_dataset_path)[self.split]
+            else:
+                ds = load_from_disk(self.source_dataset_path)
+#            ds = load_from_disk('~/s2st/fleurs_source')[self.split]
             # ds = load_dataset(
             #     'ebellob/cvss-c-fleurs-format-source',
             #     split=self.split,
@@ -120,9 +124,12 @@ class Speech2SpeechFleursDatasetBuilder:
             #     trust_remote_code=True,
             #     num_proc=12
             # )
+            
         elif is_cvss and part == 'target':
-            ds = load_from_disk(self.target_dataset_path)[self.split]
-            # ds = load_dataset(
+            if isinstance(ds, DatasetDict)
+                ds = load_from_disk(self.target_dataset_path)[self.split]
+            else:
+                ds = load_from_disk(self.target_dataset_path)
             #     'ebellob/cvss-c-fleurs-format-target',
             #     split=self.split,
             #     streaming=False,
