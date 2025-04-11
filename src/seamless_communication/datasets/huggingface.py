@@ -112,7 +112,7 @@ class Speech2SpeechFleursDatasetBuilder:
                 trust_remote_code=True,
             )
         if is_cvss and part == 'source':
-            if isinstance(ds, DatasetDict)
+            if isinstance(ds, DatasetDict):
                 ds = load_from_disk(self.source_dataset_path)[self.split]
             else:
                 ds = load_from_disk(self.source_dataset_path)
@@ -126,7 +126,7 @@ class Speech2SpeechFleursDatasetBuilder:
             # )
             
         elif is_cvss and part == 'target':
-            if isinstance(ds, DatasetDict)
+            if isinstance(ds, DatasetDict):
                 ds = load_from_disk(self.target_dataset_path)[self.split]
             else:
                 ds = load_from_disk(self.target_dataset_path)
