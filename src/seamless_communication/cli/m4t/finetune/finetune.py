@@ -13,7 +13,7 @@ from typing import Any, Dict
 
 
 import torch
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset, load_from_disk, DatasetDict
 
 from seamless_communication.cli.m4t.finetune import dataloader, dist_utils, trainer
 from seamless_communication.models.unity import (
@@ -304,17 +304,13 @@ def main() -> None:
     cvss_src_train_dataset, cvss_src_eval_dataset = None, None
 
     if args.is_source_cvss:
-        cvss_src_train_dataset = load_from_disk(args.src_path)['train']
-        #     'ebellob/cvss-c-fleurs-format-source',
-        #     split='train'
-        # )
-        #cvss_src_eval_dataset = load_from_disk(args.src_path)['validation']
-
-        # cvss_ES_eval_dataset = load_dataset(
-        #     'ebellob/cvss-c-fleurs-format-source',
-        #     split='validation'
-        # )
-        cvss_src_eval_dataset = load_from_disk(args.src_path)['validation']
+        cvss_dataset = load_from_disk(args.src_path)
+        if isinstance(cvss_dataset, DatasetDict):
+            cvss_src_train_dataset = load_from_disk(args.src_path)['train']
+            cvss_src_eval_dataset = load_from_disk(args.src_path)['validation']
+        else:
+            cvss_src_train_dataset = cvss_dataset
+            cvss_src_eval_dataset = cvss_dataset
 
 
     # TODO: delete unused params to reduce GPU memory consumption
