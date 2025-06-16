@@ -122,16 +122,28 @@ class Speech2SpeechFleursDatasetBuilder:
                 
         for item in ds:
             #print(ds)
-            audio_path = os.path.join(
-                os.path.dirname(item["path"]), item["audio"]["path"]
-            ) if item['audio']['path'] is not None else ''
-            (sample_id, audio_local_path, waveform, sampling_rate, text) = (
-                item["id"],
-                audio_path,
-                item["audio"]["array"],
-                item["audio"]["sampling_rate"],
-                item["transcription"],
-            )
+            if "audio" not in ds.keys():
+                audio_path = os.path.join(
+                    os.path.dirname(item["path"]), item[f"{part}_audio"]["path"]
+                ) if item[f'{part}_audio']['path'] is not None else ''
+                (sample_id, audio_local_path, waveform, sampling_rate, text) = (
+                    item["id"],
+                    audio_path,
+                    item[f"{part}_audio"]["array"],
+                    item[f"{part}_audio"]["sampling_rate"],
+                    item["transcription"],
+                )
+            else:
+                audio_path = os.path.join(
+                    os.path.dirname(item["path"]), item["audio"]["path"]
+                ) if item['audio']['path'] is not None else ''
+                (sample_id, audio_local_path, waveform, sampling_rate, text) = (
+                    item["id"],
+                    audio_path,
+                    item["audio"]["array"],
+                    item["audio"]["sampling_rate"],
+                    item["transcription"],
+                )
 
             #print(f"The shape of the waveform is {waveform.shape}")
 
