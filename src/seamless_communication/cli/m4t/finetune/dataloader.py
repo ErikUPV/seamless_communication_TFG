@@ -341,11 +341,14 @@ class UnitYDataLoader:
         #if self.cvss_dataset is not None:
 
         if is_cvss:
+            if 'source_audio' in self.cvss_dataset.features.keys():
+                audio_key = 'source_audio'
+            else:
+                audio_key = 'audio'
             for sample in samples:
-
                 cvss_sample = self.look_up_fn(sample.source.id)
                 if cvss_sample is None: continue
-                sample.source.waveform = torch.tensor(cvss_sample['audio']['array'])
+                sample.source.waveform = torch.tensor(cvss_sample[audio_key]['array'])
 
             
             
