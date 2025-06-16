@@ -122,7 +122,7 @@ class Speech2SpeechFleursDatasetBuilder:
                 
         for item in ds:
             #print(ds)
-            if "audio" not in ds.keys():
+            if "audio" not in ds.features.keys():
                 audio_path = os.path.join(
                     os.path.dirname(item["path"]), item[f"{part}_audio"]["path"]
                 ) if item[f'{part}_audio']['path'] is not None else ''
